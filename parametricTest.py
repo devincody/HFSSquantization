@@ -19,24 +19,36 @@ name = design.get_setup_names()
 setup = design.get_setup(name[0])
 #setup.analyze()
 
-#design.set_variable('th',u'34deg')
+
+angles = np.linspace(0,360,20)
+capacitance = []
+voltage = []
+inductance = []
+current = []
+for i in angles:
+    design.set_variable('th',(u'%.2fdeg' % (i)))
+    fields = setup.get_fields()
+    C,V = calc_capacitance(fields)
+    L,I = calc_inductance(fields)
+    capacitance.append(C)
+    voltage.append(V)
+    inductance.append(L)
+    current.append(I)
+    print "#################"
+    print "Angle: " , i
+    print "voltage:", V
+    print "current:", I
+    print "capacitance:", C
+    print "inductance:", L
+
+plt.plot(angles, capacitance)
+plt.plot(angles, voltage)
+plt.plot(angles, inductance)
+plt.plot(angles, current)
+plt.show()
 
 
 
-
-#angles = np.linspace(0,360,9)
-#res = []
-#for i in angles:
-#    design.set_variable('th',(u'%.2fdeg' % (i)))
-#    fields = setup.get_fields()
-#    Mag_E_Sq = fields.Mag_E ** 2
-#    Surf_E = Mag_E_Sq.integrate_surf("CrossSecIntSurf")
-#    print Surf_E.evaluate()
-#    #res.append(Surf_E.evaluate())
-#    #print res[-1]
-#    print 'th = ', design.get_variable_value('th')
-#plt.plot(angles, res)
-fields = setup.get_fields()
 def calc_voltage(fields, line = "intLineVolt"):
     '''Function to calculate WaveGuide Voltage
     line = integration line between plates'''
@@ -84,13 +96,13 @@ def calc_capacitance(fields, surf = "CrossSecIntSurf", line = "intLineVolt"):
     return capacitance, v
 
 C,V = calc_capacitance(fields)
-L = calc_inductance(fields)
-print "voltage", V
-print "current", I
-#design.Clear_Field_Clac_Stack()
-#import time; time.sleep(10)
-print "capacitance", C
-print "inductance", L
+L,I = calc_inductance(fields)
+# print "voltage", V
+# print "current", I
+# #design.Clear_Field_Clac_Stack()
+# #import time; time.sleep(10)
+# print "capacitance", C
+# print "inductance", L
 #    
 #def calc_capacitance(fields, surf = "CrossSecIntSurf", line = "intLineVolt"):
 #def calc_capacitance(fields, surf = "CrossSecIntSurf", line = "intLineCurrent"):

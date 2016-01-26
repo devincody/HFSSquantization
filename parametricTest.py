@@ -2,7 +2,7 @@
 """
 Created on Fri Jan 22 16:38:28 2016
 
-@author: Devin
+@author: Devin Cody
 """
 #from hfss import *
 import sys
@@ -94,18 +94,5 @@ def calc_capacitance(fields, surf = "CrossSecIntSurf", line = "intLineVolt"):
     capacitance = precapacitance*epsilon/(v**2)
     design.Clear_Field_Clac_Stack()
     return capacitance, v
-
-C,V = calc_capacitance(fields)
-L,I = calc_inductance(fields)
-# print "voltage", V
-# print "current", I
-# #design.Clear_Field_Clac_Stack()
-# #import time; time.sleep(10)
-# print "capacitance", C
-# print "inductance", L
-#    
-#def calc_capacitance(fields, surf = "CrossSecIntSurf", line = "intLineVolt"):
-#def calc_capacitance(fields, surf = "CrossSecIntSurf", line = "intLineCurrent"):
-#    
 
 hfss.release()

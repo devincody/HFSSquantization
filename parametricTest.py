@@ -13,42 +13,6 @@ import matplotlib.pyplot as plt
 from hfss import get_active_design
 from hfss import get_active_project
 
-proj = get_active_project()
-design = get_active_design()
-name = design.get_setup_names()
-setup = design.get_setup(name[0])
-#setup.analyze()
-
-
-angles = np.linspace(0,360,20)
-capacitance = []
-voltage = []
-inductance = []
-current = []
-for i in angles:
-    design.set_variable('th',(u'%.2fdeg' % (i)))
-    fields = setup.get_fields()
-    C,V = calc_capacitance(fields)
-    L,I = calc_inductance(fields)
-    capacitance.append(C)
-    voltage.append(V)
-    inductance.append(L)
-    current.append(I)
-    print "#################"
-    print "Angle: " , i
-    print "voltage:", V
-    print "current:", I
-    print "capacitance:", C
-    print "inductance:", L
-
-plt.plot(angles, capacitance)
-plt.plot(angles, voltage)
-plt.plot(angles, inductance)
-plt.plot(angles, current)
-plt.show()
-
-
-
 def calc_voltage(fields, line = "intLineVolt"):
     '''Function to calculate WaveGuide Voltage
     line = integration line between plates'''
@@ -94,5 +58,40 @@ def calc_capacitance(fields, surf = "CrossSecIntSurf", line = "intLineVolt"):
     capacitance = precapacitance*epsilon/(v**2)
     design.Clear_Field_Clac_Stack()
     return capacitance, v
+
+proj = get_active_project()
+design = get_active_design()
+name = design.get_setup_names()
+setup = design.get_setup(name[0])
+#setup.analyze()
+
+
+angles = np.linspace(0,360,20)
+capacitance = []
+voltage = []
+inductance = []
+current = []
+for i in angles:
+    design.set_variable('th',(u'%.2fdeg' % (i)))
+    fields = setup.get_fields()
+    C,V = calc_capacitance(fields)
+    L,I = calc_inductance(fields)
+    capacitance.append(C)
+    voltage.append(V)
+    inductance.append(L)
+    current.append(I)
+    print "#################"
+    print "Angle: " , i
+    print "voltage:", V
+    print "current:", I
+    print "capacitance:", C
+    print "inductance:", L
+
+plt.plot(angles, capacitance)
+plt.plot(angles, voltage)
+plt.plot(angles, inductance)
+plt.plot(angles, current)
+plt.show()
+
 
 hfss.release()

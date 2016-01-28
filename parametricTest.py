@@ -59,39 +59,88 @@ def calc_capacitance(fields, surf = "CrossSecIntSurf", line = "intLineVolt"):
     design.Clear_Field_Clac_Stack()
     return capacitance, v
 
-proj = get_active_project()
-design = get_active_design()
-name = design.get_setup_names()
-setup = design.get_setup(name[0])
-#setup.analyze()
+def reject_outliers(angle, data, m=2):
+    angle2 = []
+    data2 = []
+    mean = np.mean(data)
+    std = np.std(data)   
+    for i in range(len(data)):
+        print i, data
+        if abs(data[i] - mean) < m*std:
+            data2.append(data[i])
+            angle2.append(angle[i])
+    return angle2, data2
 
+def main():
+    proj = get_active_project()
+    design = get_active_design()
+    name = design.get_setup_names()
+    setup = design.get_setup(name[0])
+    #setup.analyze()
+    
+    
+    angles = np.linspace(0,360,100)
+    capacitance = []
+    voltage = []
+    inductance = []
+    current = []
+    for i in angles:
+        design.set_variable('th',(u'%.2fdeg' % (i)))
+        fields = setup.get_fields()
+        C,V = calc_capacitance(fields)
+        L,I = calc_inductance(fields)
+        capacitance.append(C)
+        voltage.append(V)
+        inductance.append(L)
+        current.append(I)
+        print "#################"
+        print "Angle: " , i
+        print "voltage:", V
+        print "current:", I
+        print "capacitance:", C
+        print "inductance:", L
 
-angles = np.linspace(0,360,20)
-capacitance = []
-voltage = []
-inductance = []
-current = []
-for i in angles:
-    design.set_variable('th',(u'%.2fdeg' % (i)))
-    fields = setup.get_fields()
-    C,V = calc_capacitance(fields)
-    L,I = calc_inductance(fields)
-    capacitance.append(C)
-    voltage.append(V)
-    inductance.append(L)
-    current.append(I)
-    print "#################"
-    print "Angle: " , i
-    print "voltage:", V
-    print "current:", I
-    print "capacitance:", C
-    print "inductance:", L
+def plot():
+    ang, cap = reject_outliers(angles,capacitance)
+    plt.plot(ang, cap)
+    plt.show()
+    
+    ang, vot = reject_outliers(angles,voltage)
+    plt.plot(ang, vot) 
+    plt.show()
+    
+    ang, ind=reject_outliers(angles,inductance)
+    plt.plot(ang, ind)
+    plt.show()
+    
+    ang, cur = reject_outliers(angles,current)
+    plt.plot(ang, cur)
+    plt.show()
+    
+def save():
+    prefix = "../data/parameters"
+    labels = ["capacitance", "voltage", "inductance", "current"]
+    for i in labels:
+        name = prefix + i + ".npy"
+        np.save(name, eval(i))
 
-plt.plot(angles, capacitance)
-plt.plot(angles, voltage)
-plt.plot(angles, inductance)
-plt.plot(angles, current)
-plt.show()
-
-
-hfss.release()
+def load():
+    prefix = "../data/parameters"
+    labels = ["capacitance", "voltage", "inductance", "current"]
+    
+    name = prefix + "capacitance" + ".npy"
+    capacitance = np.load(name)
+    
+    name = prefix + "voltage" + ".npy"
+    voltage = np.load(name)
+    
+    name = prefix + "inductance" + ".npy"
+    inductance = np.load(name)
+    
+    name = prefix + "current" + ".npy"
+    current = np.load(name)
+    
+if __name__ == "__main__":
+    load()
+    plot()
+    hfss.release()

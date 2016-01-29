@@ -14,12 +14,12 @@ from hfss import get_active_design
 from hfss import get_active_project
 
 class waveguide(object):
-    def __init__(self):
+    def __init__(self, angle_s = 0, angle_e = 360, angle_n = 100):
         self.proj = get_active_project()
         self.design = get_active_design()
         self.name = self.design.get_setup_names()
         self.setup = self.design.get_setup(self.name[0])
-        self.angles = np.linspace(0,360,100)
+        self.angles = np.linspace(angle_s, angle_e, angle_n)
         self.capacitance = []
         self.voltage = []
         self.inductance = []
@@ -67,8 +67,8 @@ class waveguide(object):
         line = integration line between plates
         returns voltage as secondary parameter''' 
         self.design.Clear_Field_Clac_Stack()
+        V = self.calc_voltage(fields, line)   
         epsilon = 8.8541878176*10**(-12)    
-        V = self.calc_voltage(fields, line)    
         Mag_E_Sq = fields.Mag_E ** 2
         Surf_E = Mag_E_Sq.integrate_surf(surf)
         precapacitance = Surf_E.evaluate()
@@ -77,7 +77,6 @@ class waveguide(object):
         return C, V
 
     def analyze(self):
-        #fields = self.setup.get_fields()
         for i in self.angles:
             self.design.set_variable('th',(u'%.2fdeg' % (i)))
             fields = self.setup.get_fields()
@@ -94,12 +93,12 @@ class waveguide(object):
             print "capacitance:", C
             print "inductance:", L
     
-    def plot(self):
+    def plot(self,scale_factor = 1.2):
         labels = ["Capacitance", "Voltage", "Inductance", "Current"]
         ylabel_name = "Angle around disk (Degrees)"
         
         ang, cap = reject_outliers(self.angles, self.capacitance)
-        plt.plot(np.array(ang), np.transpose(cap))
+        plt.plot(ang, cap)
         plt.title(labels[0])
         plt.xlabel(ylabel_name)
         plt.ylabel(labels[0] + "(Farads per Meter)")
@@ -111,22 +110,22 @@ class waveguide(object):
         plt.title(labels[1])
         plt.xlabel(ylabel_name)
         plt.ylabel(labels[1] + "(Volts)")
-        plt.axis([0,360, min(vot), max(vot)])
+        plt.axis([0,360, min(vot)*scale_factor, max(vot)*scale_factor])
         plt.show()
         
         ang, ind = reject_outliers(self.angles,self.inductance)
         plt.title(labels[2])
         plt.xlabel(ylabel_name)
         plt.ylabel(labels[2] + "(Henries per Meter)")
-        plt.axis([0,360, min(ind), max(ind)])
-        plt.plot(self.angles, self.inductance)
-        plt.show()   
+        plt.axis([0,360, min(ind)*scale_factor, max(ind)*scale_factor])
+        plt.plot(ang, ind)
+        plt.show()
         
         ang, cur = reject_outliers(self.angles,self.current)
         plt.title(labels[3])
         plt.xlabel(ylabel_name)
         plt.ylabel(labels[3] + "(Amps)")
-        plt.axis([0,360, min(cur), max(cur)])
+        plt.axis([0,360, min(cur)*scale_factor, max(cur)*scale_factor])
         plt.plot(ang, cur)
         plt.show()
         

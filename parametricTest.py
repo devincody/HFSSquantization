@@ -24,7 +24,12 @@ class waveguide(object):
         self.voltage = []
         self.inductance = []
         self.current = []
-        self.setup.analyze()
+        try:
+            fields = self.setup.get_fields()
+            print fields
+        except:
+            print "Analyzing Geometry... this might take a while"
+            self.setup.analyze()
     
     def calc_voltage(self, fields, line = "intLineVolt"):
         '''Function to calculate WaveGuide Voltage

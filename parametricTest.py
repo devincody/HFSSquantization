@@ -25,11 +25,13 @@ class waveguide(object):
         self.inductance = []
         self.current = []
         try:
-            fields = self.setup.get_fields()
-            print fields
+            self.solutions = self.setup.get_solutions()
+            self.eigenmodes() = self.solutions.eigenmodes()
         except:
             print "Analyzing Geometry... this might take a while"
             self.setup.analyze()
+            self.solutions = self.setup.get_solutions()
+            self.eigenmodes() = self.solutions.eigenmodes()
     
     def calc_voltage(self, fields, line = "intLineVolt"):
         '''Function to calculate WaveGuide Voltage
@@ -139,12 +141,13 @@ class waveguide(object):
         labels = ["capacitance", "voltage", "inductance", "current"]
         for i in labels:
             name = prefix + i + ".npy"
-            np.save(name, eval(i))
+            np.save(name, eval("self." + i))
+        name = "../data/parametersangles.npy"
+        np.save(name, self.angles)
     
     def load(self):
         prefix = "../data/parameters"
         #labels = ["capacitance", "voltage", "inductance", "current"]
-        
         name = prefix + "capacitance" + ".npy"
         self.capacitance = np.load(name)
          
@@ -169,10 +172,8 @@ def reject_outliers(angle, data, m=2):
     return angle2, data2
 
 def main():
-    wg = waveguide()    
-    #capacitance, voltage, inductance, current, angles= analyze(proj, design, setup)    
-    #save(capacitance, voltage, inductance, current)
-    #wg.analyze()
+    wg = waveguide()       
+    wg.save()
     wg.load()    
     wg.plot()
     hfss.release()

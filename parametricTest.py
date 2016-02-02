@@ -26,12 +26,12 @@ class waveguide(object):
         self.current = []
         try:
             self.solutions = self.setup.get_solutions()
-            self.eigenmodes() = self.solutions.eigenmodes()
+            self.eigenmodes = self.solutions.eigenmodes()
         except:
             print "Analyzing Geometry... this might take a while"
             self.setup.analyze()
             self.solutions = self.setup.get_solutions()
-            self.eigenmodes() = self.solutions.eigenmodes()
+            self.eigenmodes = self.solutions.eigenmodes()
     
     def calc_voltage(self, fields, line = "intLineVolt"):
         '''Function to calculate WaveGuide Voltage
@@ -83,7 +83,7 @@ class waveguide(object):
         self.design.Clear_Field_Clac_Stack()
         return C, V
 
-    def analyze(self):
+    def compute_LCVI(self):
         for i in self.angles:
             self.design.set_variable('th',(u'%.2fdeg' % (i)))
             fields = self.setup.get_fields()
@@ -141,9 +141,13 @@ class waveguide(object):
         labels = ["capacitance", "voltage", "inductance", "current"]
         for i in labels:
             name = prefix + i + ".npy"
-            np.save(name, eval("self." + i))
+            ii = "self." + i
+            print self.capacitance
+            np.save(name, eval(ii))
         name = "../data/parametersangles.npy"
         np.save(name, self.angles)
+        name = "../data/parameterseigenmodes.npy"
+        np.save(name, self.eigenmodes)
     
     def load(self):
         prefix = "../data/parameters"
@@ -159,6 +163,9 @@ class waveguide(object):
         
         name = prefix + "current" + ".npy"
         self.current = np.load(name)
+        print self.current
+        print name
+        print name == "../data/parameterscurrent.npy"
 
 def reject_outliers(angle, data, m=2):
     angle2 = []
@@ -172,7 +179,8 @@ def reject_outliers(angle, data, m=2):
     return angle2, data2
 
 def main():
-    wg = waveguide()       
+    wg = waveguide() 
+    wg.compute_LCVI()      
     wg.save()
     wg.load()    
     wg.plot()

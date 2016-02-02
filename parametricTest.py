@@ -142,7 +142,6 @@ class waveguide(object):
         for i in labels:
             name = prefix + i + ".npy"
             ii = "self." + i
-            print self.capacitance
             np.save(name, eval(ii))
         name = "../data/parametersangles.npy"
         np.save(name, self.angles)
@@ -154,18 +153,12 @@ class waveguide(object):
         #labels = ["capacitance", "voltage", "inductance", "current"]
         name = prefix + "capacitance" + ".npy"
         self.capacitance = np.load(name)
-         
         name = prefix + "voltage" + ".npy"
         self.voltage = np.load(name)
-        
         name = prefix + "inductance" + ".npy"
         self.inductance = np.load(name)
-        
         name = prefix + "current" + ".npy"
         self.current = np.load(name)
-        print self.current
-        print name
-        print name == "../data/parameterscurrent.npy"
 
 def reject_outliers(angle, data, m=2):
     angle2 = []
@@ -180,8 +173,8 @@ def reject_outliers(angle, data, m=2):
 
 def main():
     wg = waveguide() 
-    wg.compute_LCVI()      
-    wg.save()
+    #wg.compute_LCVI()      
+    #wg.save()
     wg.load()    
     wg.plot()
     hfss.release()

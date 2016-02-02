@@ -25,23 +25,37 @@ class simulated_wg(object):
         self.eigenmodes = np.load(name)
     
     def build_L_mat(self):
-        size = len(self.inductance)
+        smooth_l = interpolate_outliers(self.angles, self.inductance)        
+        size = len(smooth_l)
         self.L = np.zeros((size,size))
+        d_l = 1#5.89*.001*2*np.pi/100
         for i in range(size):
-            self.L[i][i] += self.inductance[i]**-1
-            self.L[(i+1)%size][i] += -self.inductance[i]**-1
-            self.L[i][(i+1)%size] += -self.inductance[i]**-1
-            self.L[(i+1)%size][(i+1)%size] += self.inductance[i]**-1
-        print self.L
+            self.L[i][i] += (d_l*smooth_l[i])**-1
+            self.L[(i+1)%size][i] += -(d_l*smooth_l[i])**-1
+            self.L[i][(i+1)%size] += -(d_l*smooth_l[i])**-1
+            self.L[(i+1)%size][(i+1)%size] += (d_l*smooth_l[i])**-1
 
     def build_C_mat(self):
-        pass
+        smooth_c = interpolate_outliers(self.angles, self.capacitance)
+        size = len(smooth_c)
+        self.C = np.zeros((size,size))
+        d_l = 1#5.89*.001*2*np.pi/100
+        for i in range(size):
+            self.C[i][i] += (d_l*smooth_c[i])
+            self.C[(i+1)%size][i] += -(d_l*smooth_c[i])
+            self.C[i][(i+1)%size] += -(d_l*smooth_c[i])
+            self.C[(i+1)%size][(i+1)%size] += (d_l*smooth_c[i])
 
     def test_interpolate(self):
-        potted = self.inductance
+        potted = self.capacitance
         voltage = interpolate_outliers(self.angles,potted)
         plt.plot(self.angles,voltage, self.angles, potted)
         plt.show()
+        
+    def get_frequencies(self):
+        LC = np.dot(np.linalg.inv(self.C),self.L)
+        self.evals = np.linalg.eigvals(LC)
+        print np.sqrt(self.evals)
 
 def interpolate_outliers(angle, data, m=.5,mv_av = 8):
     '''
@@ -73,8 +87,11 @@ def interpolate_outliers(angle, data, m=.5,mv_av = 8):
         
 def main():
     sim_wg = simulated_wg()
-    sim_wg.test_interpolate()
+    #sim_wg.test_interpolate()
     sim_wg.build_L_mat()
+    sim_wg.build_C_mat()
+    sim_wg.get_frequencies()
+    
     
 if __name__ == "__main__":
     main()            

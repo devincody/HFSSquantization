@@ -59,11 +59,11 @@ class waveguide(object):
         line = integration line between plates
         returns current as secondary parameter'''  
         self.design.Clear_Field_Clac_Stack()
+        I = self.calc_current(fields, line)
         mu = 4*np.pi*10**-7
         Mag_H_Sq = fields.Mag_H ** 2
-        I = self.calc_current(fields, line)
         Surf_H = Mag_H_Sq.integrate_surf(surf)
-        preinductance = Surf_H.evaluate()
+        preinductance = Surf_H.evaluate(phase = 90)
         L = preinductance*mu/(I**2)   
         self.design.Clear_Field_Clac_Stack()
         return L, I
@@ -173,8 +173,8 @@ def reject_outliers(angle, data, m=2):
 
 def main():
     wg = waveguide() 
-    #wg.compute_LCVI()      
-    #wg.save()
+    wg.compute_LCVI()      
+    wg.save()
     wg.load()    
     wg.plot()
     hfss.release()

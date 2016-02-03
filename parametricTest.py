@@ -174,8 +174,10 @@ def reject_outliers(angle, data, m=2):
 def main():
     wg = waveguide() 
     wg.compute_LCVI()      
+    print wg.inductance
     wg.save()
-    wg.load()    
+    wg.load()   
+    print wg.inductance
     wg.plot()
     hfss.release()
     

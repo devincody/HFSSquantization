@@ -3,9 +3,13 @@
 Created on Mon Feb 01 20:49:48 2016
 @author: Devin
 """
+import sys
+if ~(r'F:\Documents\Yale\Junior Year\HFSSpython\pyHFSS' in sys.path):
+    sys.path.append(r'F:\Documents\Yale\Junior Year\HFSSpython\pyHFSS')
 import hfss, numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
+import pandas as pd
 
 class simulated_wg(object):
     def __init__(self):
@@ -45,51 +49,55 @@ class simulated_wg(object):
             self.C[i][(i+1)%size] += -(d_l*smooth_c[i])
             self.C[(i+1)%size][(i+1)%size] += (d_l*smooth_c[i])
 
-    def test_interpolate(self):
-        potted = self.capacitance
-        voltage = interpolate_outliers(self.angles,potted)
+    def test_interpolate(self,plot_me = True):
+        potted = self.inductance
+        voltage = interpolate_outliers(self.angles,potted, plot_me = plot_me)
         plt.plot(self.angles,voltage, self.angles, potted)
+        ax = plt.gca()
+        ax.set_ylim(min(voltage), max(voltage))
         plt.show()
         
     def get_frequencies(self):
         LC = np.dot(np.linalg.inv(self.C),self.L)
+        print LC
         self.evals = np.linalg.eigvals(LC)
         print np.sqrt(self.evals)
 
-def interpolate_outliers(angle, data, m=.5,mv_av = 8):
+def interpolate_outliers(angle, data, threshold=1., window = 5, plot_me = False):
     '''
     Function to smooth outliers from the data set. Applys moving
     average smoothing and cyclic boundary conditions. Threshold
     is set by:
-    m - number of standard deviations from average which defines outliers
-    mv_av - number of points in each direction used for average
+    threshold - number of standard deviations from average which defines outliers
+    window - number of points in each direction used for average
     '''
-    data2 = []
-    mean = np.mean(data)
-    std = np.std(data)
-    for i in range(len(data)):
-        if abs(data[i] - mean) < m*std:
-            data2.append(data[i])
-        else:
-            ang_last = len(angle)
-            if (i-mv_av < 0):
-                comb = np.concatenate((data[0: i+8],data[ang_last + i - mv_av: ang_last]))
-                data2.append(np.mean(comb))
-            elif(i+mv_av > ang_last):
-                comb = np.concatenate((data[i-8: ang_last], data[0:i+mv_av - ang_last]))
-                data2.append(np.mean(comb))
-            else:
-                data2.append(np.mean(data[i-8:i+8]))
-    return data2
+    df = pd.DataFrame({'parameter':data},index=angle)
+    #mean_data = np.mean(df['parameter'])
+    df['data_mean'] = pd.rolling_median(df['parameter'].copy(), window=window, center=True).fillna(method='bfill').fillna(method='ffill')
+    difference = np.abs(df['parameter'] - df['data_mean'])#mean_data)#
+    outlier_idx = difference > threshold*df['parameter'].std()    
+    
+    s = df['parameter'].copy()
+    s[outlier_idx] = np.nan
+    s.interpolate(method='spline', order=1, inplace=True)
+    df['cleaned_parameter'] = s
+    
+    if (plot_me == True):
+        figsize = (7, 2.75)
+        fig, ax = plt.subplots(figsize=figsize)
+        df['parameter'].plot()
+        df['cleaned_parameter'].plot()
+        ax.set_ylim(min(df['cleaned_parameter']), max(df['cleaned_parameter']))
+    return np.array(df['cleaned_parameter'])
 
 
         
 def main():
     sim_wg = simulated_wg()
-    #sim_wg.test_interpolate()
-    sim_wg.build_L_mat()
-    sim_wg.build_C_mat()
-    sim_wg.get_frequencies()
+    sim_wg.test_interpolate()
+    #sim_wg.build_L_mat()
+    #sim_wg.build_C_mat()
+    #sim_wg.get_frequencies()
     
     
 if __name__ == "__main__":

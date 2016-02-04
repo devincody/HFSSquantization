@@ -29,7 +29,7 @@ class simulated_wg(object):
     
     def build_L_mat(self):
         smooth_l = interpolate_outliers(self.angles, self.inductance)   
-        smooth_l = interpolate_outliers(self.angles, smooth_l) 
+        smooth_l = interpolate_outliers(self.angles, smooth_l,plot_me = True) 
         size = len(smooth_l)
         self.L = np.zeros((size,size))
         d_l = 5.89*.001*2*np.pi/100
@@ -41,7 +41,7 @@ class simulated_wg(object):
 
     def build_C_mat(self):
         smooth_c = interpolate_outliers(self.angles, self.capacitance)
-        smooth_c = interpolate_outliers(self.angles, smooth_c)
+        smooth_c = interpolate_outliers(self.angles, smooth_c,plot_me = True)
         size = len(smooth_c)
         self.C = np.zeros((size,size))
         d_l = 5.89*.001*2*np.pi/100
@@ -50,6 +50,30 @@ class simulated_wg(object):
             self.C[(i+1)%size][i] += -(d_l*smooth_c[i])
             self.C[i][(i+1)%size] += -(d_l*smooth_c[i])
             self.C[(i+1)%size][(i+1)%size] += (d_l*smooth_c[i])
+            
+    def build_L_mat_test(self):
+        smooth_l = interpolate_outliers(self.angles, self.inductance)   
+        size = len(smooth_l)
+        self.L = np.zeros((size,size))
+        d_l = 5.89*.001*2*np.pi/100
+        for i in range(size):
+            self.L[i][i] += (d_l*5*10**(-8))**-1
+            self.L[(i+1)%size][i] += -(d_l*5*10**(-8))**-1
+            self.L[i][(i+1)%size] += -(d_l*5*10**(-8))**-1
+            self.L[(i+1)%size][(i+1)%size] += (d_l*5*10**(-8))**-1
+        print "L:", self.L
+
+    def build_C_mat_test(self):
+        smooth_c = interpolate_outliers(self.angles, self.capacitance)
+        size = len(smooth_c)
+        self.C = np.zeros((size,size))
+        d_l = 5.89*.001*2*np.pi/100
+        for i in range(size):
+            self.C[i][i] += (d_l*2.3*10**(-10))
+            self.C[(i+1)%size][i] += -(d_l*2.3*10**(-10))
+            self.C[i][(i+1)%size] += -(d_l*2.3*10**(-10))
+            self.C[(i+1)%size][(i+1)%size] += (d_l*2.3*10**(-10))
+        print "C:", self.C
 
     def test_interpolate(self,plot_me = True):
         potted = self.inductance
@@ -60,13 +84,17 @@ class simulated_wg(object):
         plt.show()
         
     def get_frequencies(self):
-        LC = np.dot(np.linalg.inv(self.C),self.L)
-        #print LC
+        LC = np.dot(self.L,np.linalg.inv(self.C))
+        print "LC"        
+        print LC
         self.evals = -np.linalg.eigvals(LC)
         self.calc_freq = np.sqrt(self.evals)/(2*np.pi)
+        plt.figure()
+        plt.plot(np.sort(self.calc_freq))
+        plt.show()
         print np.sort(self.calc_freq)
 
-def interpolate_outliers(angle, data, threshold=1., window = 5, plot_me = False):
+def interpolate_outliers(angle, data, threshold=1., window = 12, plot_me = False):
     '''
     Function to smooth outliers from the data set. Applys moving
     average smoothing and cyclic boundary conditions. Threshold
@@ -89,27 +117,27 @@ def interpolate_outliers(angle, data, threshold=1., window = 5, plot_me = False)
     s = np.array(df['parameter'])
     itms = len(outlier_idx)
     for i in range(itms):
-        if tst[i] == True or tst[(i-1)%itms] == True or tst[(i+1)%itms] == True:
+        if tst[i] == True or tst[(i-1)%itms] == True or tst[(i+1)%itms] == True or tst[(i-2)%itms] == True or tst[(i+2)%itms] == True:
             tmp =  datamean[i]
             s[i] = tmp
     #print s
     df['cleaned_parameter'] = s
     
-#    if (plot_me == True):
-#        figsize = (7, 2.75)
-#        fig, ax = plt.subplots(figsize=figsize)
-#        df['parameter'].plot()
-#        df['cleaned_parameter'].plot()
-#        ax.set_ylim(min(df['cleaned_parameter']), max(df['cleaned_parameter']))
+    if (plot_me == True):
+        figsize = (7, 2.75)
+        fig, ax = plt.subplots(figsize=figsize)
+        df['parameter'].plot()
+        df['cleaned_parameter'].plot()
+        ax.set_ylim(min(df['cleaned_parameter']), max(df['cleaned_parameter']))
     return np.array(df['cleaned_parameter'])
 
 
         
 def main():
     sim_wg = simulated_wg()
-    sim_wg.test_interpolate()
-    sim_wg.build_L_mat()
-    sim_wg.build_C_mat()
+    #sim_wg.test_interpolate()
+    sim_wg.build_L_mat_test()
+    sim_wg.build_C_mat_test()
     sim_wg.get_frequencies()
     
     

@@ -29,7 +29,7 @@ class simulated_wg(object):
     
     def build_L_mat(self):
         smooth_l = interpolate_outliers(self.angles, self.inductance)  
-        smooth_l = interpolate_outliers(self.angles, smooth_l) 
+        #smooth_l = interpolate_outliers(self.angles, smooth_l) 
         size = len(smooth_l)
         self.L = np.zeros((size,size))
         d_l = 5.89*.001*2*np.pi/100
@@ -44,6 +44,7 @@ class simulated_wg(object):
 
     def build_C_mat(self):
         smooth_c = interpolate_outliers(self.angles, self.capacitance)
+        #smooth_c = interpolate_outliers(self.angles, smooth_c)        
         size = len(smooth_c)
         self.C = np.zeros((size,size))
         d_l = 5.89*.001*2*np.pi/100
@@ -81,11 +82,11 @@ class simulated_wg(object):
         print "C:", self.C
 
     def test_interpolate(self,plot_me = True):
-        potted = self.inductance
+        potted = self.capacitance
         voltage = interpolate_outliers(self.angles,potted, plot_me = plot_me)
         plt.plot(self.angles,voltage, self.angles, potted)
         ax = plt.gca()
-        ax.set_ylim(min(voltage)/1.05, max(voltage)*1.05)
+        ax.set_ylim(min(voltage)-abs(min(voltage)*.05), max(voltage)*1.05)
         plt.show()
         
     def get_frequencies(self):
@@ -101,8 +102,9 @@ class simulated_wg(object):
         plt.show()
         print "frequencies:"
         print np.sort(self.calc_freq)
+        return np.sort(self.calc_freq)
 
-def interpolate_outliers(angle, data, threshold=1., window = 12, plot_me = False):
+def interpolate_outliers(angle, data, threshold=.5, window = 12, plot_me = False):
     '''
     Function to smooth outliers from the data set. Applys moving
     average smoothing and cyclic boundary conditions. Threshold
@@ -141,14 +143,12 @@ def interpolate_outliers(angle, data, threshold=1., window = 12, plot_me = False
 
 
         
-#def main():
-sim_wg = simulated_wg()
-sim_wg.test_interpolate()
-sim_wg.build_L_mat()
-sim_wg.build_C_mat()
-sim_wg.get_frequencies()
+def main():
+    sim_wg = simulated_wg()
+    sim_wg.test_interpolate()
+    sim_wg.build_L_mat()
+    sim_wg.build_C_mat()
+    sim_wg.get_frequencies()
     
-sim_wg.zlatko = 1
-    
-#if __name__ == "__main__":
-#    main()            
+if __name__ == "__main__":
+    main()            

@@ -28,39 +28,44 @@ class simulated_wg(object):
         self.eigenmodes = np.load(name)
     
     def build_L_mat(self):
-        smooth_l = interpolate_outliers(self.angles, self.inductance)   
-        smooth_l = interpolate_outliers(self.angles, smooth_l,plot_me = True) 
+        smooth_l = interpolate_outliers(self.angles, self.inductance)  
+        smooth_l = interpolate_outliers(self.angles, smooth_l) 
         size = len(smooth_l)
         self.L = np.zeros((size,size))
         d_l = 5.89*.001*2*np.pi/100
+        #v = (d_l*5*10**(-8))**-1
+        #v = 1;
         for i in range(size):
-            self.L[i][i] += (d_l*smooth_l[i])**-1
+            self.L[i][i]          +=  (d_l*smooth_l[i])**-1
             self.L[(i+1)%size][i] += -(d_l*smooth_l[i])**-1
             self.L[i][(i+1)%size] += -(d_l*smooth_l[i])**-1
-            self.L[(i+1)%size][(i+1)%size] += (d_l*smooth_l[i])**-1
+            self.L[(i+1)%size][(i+1)%size] +=  (d_l*smooth_l[i])**-1
+        print "L:", self.L
 
     def build_C_mat(self):
         smooth_c = interpolate_outliers(self.angles, self.capacitance)
-        smooth_c = interpolate_outliers(self.angles, smooth_c,plot_me = True)
         size = len(smooth_c)
         self.C = np.zeros((size,size))
         d_l = 5.89*.001*2*np.pi/100
         for i in range(size):
-            self.C[i][i] += (d_l*smooth_c[i])
-            self.C[(i+1)%size][i] += -(d_l*smooth_c[i])
-            self.C[i][(i+1)%size] += -(d_l*smooth_c[i])
-            self.C[(i+1)%size][(i+1)%size] += (d_l*smooth_c[i])
+            self.C[i][i] = (d_l*smooth_c[i])
+            #self.C[(i+1)%size][i] += -(d_l*2.3*10**(-10))
+            #self.C[i][(i+1)%size] += -(d_l*2.3*10**(-10))
+            #self.C[(i+1)%size][(i+1)%size] += (d_l*2.3*10**(-10))
+        print "C:", self.C
             
     def build_L_mat_test(self):
         smooth_l = interpolate_outliers(self.angles, self.inductance)   
         size = len(smooth_l)
         self.L = np.zeros((size,size))
         d_l = 5.89*.001*2*np.pi/100
+        v = (d_l*5*10**(-8))**-1
+        #v = 1;
         for i in range(size):
-            self.L[i][i] += (d_l*5*10**(-8))**-1
-            self.L[(i+1)%size][i] += -(d_l*5*10**(-8))**-1
-            self.L[i][(i+1)%size] += -(d_l*5*10**(-8))**-1
-            self.L[(i+1)%size][(i+1)%size] += (d_l*5*10**(-8))**-1
+            self.L[i][i]          +=  v
+            self.L[(i+1)%size][i] += -v
+            self.L[i][(i+1)%size] += -v
+            self.L[(i+1)%size][(i+1)%size] +=  v
         print "L:", self.L
 
     def build_C_mat_test(self):
@@ -69,10 +74,10 @@ class simulated_wg(object):
         self.C = np.zeros((size,size))
         d_l = 5.89*.001*2*np.pi/100
         for i in range(size):
-            self.C[i][i] += (d_l*2.3*10**(-10))
-            self.C[(i+1)%size][i] += -(d_l*2.3*10**(-10))
-            self.C[i][(i+1)%size] += -(d_l*2.3*10**(-10))
-            self.C[(i+1)%size][(i+1)%size] += (d_l*2.3*10**(-10))
+            self.C[i][i] = (d_l*2.3*10**(-10))
+            #self.C[(i+1)%size][i] += -(d_l*2.3*10**(-10))
+            #self.C[i][(i+1)%size] += -(d_l*2.3*10**(-10))
+            #self.C[(i+1)%size][(i+1)%size] += (d_l*2.3*10**(-10))
         print "C:", self.C
 
     def test_interpolate(self,plot_me = True):
@@ -84,14 +89,17 @@ class simulated_wg(object):
         plt.show()
         
     def get_frequencies(self):
-        LC = np.dot(self.L,np.linalg.inv(self.C))
+        print "inv C"
+        print np.linalg.inv(self.C)
+        LC = np.dot(np.linalg.inv(self.C),self.L)
         print "LC"        
         print LC
         self.evals = -np.linalg.eigvals(LC)
-        self.calc_freq = np.sqrt(self.evals)/(2*np.pi)
+        self.calc_freq = np.sqrt(-self.evals)/(2*np.pi)
         plt.figure()
         plt.plot(np.sort(self.calc_freq))
         plt.show()
+        print "frequencies:"
         print np.sort(self.calc_freq)
 
 def interpolate_outliers(angle, data, threshold=1., window = 12, plot_me = False):
@@ -133,13 +141,14 @@ def interpolate_outliers(angle, data, threshold=1., window = 12, plot_me = False
 
 
         
-def main():
-    sim_wg = simulated_wg()
-    #sim_wg.test_interpolate()
-    sim_wg.build_L_mat_test()
-    sim_wg.build_C_mat_test()
-    sim_wg.get_frequencies()
+#def main():
+sim_wg = simulated_wg()
+sim_wg.test_interpolate()
+sim_wg.build_L_mat()
+sim_wg.build_C_mat()
+sim_wg.get_frequencies()
     
+sim_wg.zlatko = 1
     
-if __name__ == "__main__":
-    main()            
+#if __name__ == "__main__":
+#    main()            

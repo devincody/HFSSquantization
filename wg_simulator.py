@@ -27,7 +27,7 @@ class simulated_wg(object):
         name = "../data/parameterseigenmodes.npy"
         self.eigenmodes = np.load(name)
     
-    def build_L_mat(self):
+    def build_L_mat(self, verbose = False):
         smooth_l = interpolate_outliers(self.angles, self.inductance)  
         #smooth_l = interpolate_outliers(self.angles, smooth_l) 
         size = len(smooth_l)
@@ -40,9 +40,11 @@ class simulated_wg(object):
             self.L[(i+1)%size][i] += -(d_l*smooth_l[i])**-1
             self.L[i][(i+1)%size] += -(d_l*smooth_l[i])**-1
             self.L[(i+1)%size][(i+1)%size] +=  (d_l*smooth_l[i])**-1
-        print "L:", self.L
+            
+        if verbose:
+            print "L:", self.L
 
-    def build_C_mat(self):
+    def build_C_mat(self, verbose = False):
         smooth_c = interpolate_outliers(self.angles, self.capacitance)
         #smooth_c = interpolate_outliers(self.angles, smooth_c)        
         size = len(smooth_c)
@@ -53,9 +55,10 @@ class simulated_wg(object):
             #self.C[(i+1)%size][i] += -(d_l*2.3*10**(-10))
             #self.C[i][(i+1)%size] += -(d_l*2.3*10**(-10))
             #self.C[(i+1)%size][(i+1)%size] += (d_l*2.3*10**(-10))
-        print "C:", self.C
+        if verbose:
+            print "C:", self.C
             
-    def build_L_mat_test(self):
+    def build_L_mat_test(self,verbose = False):
         smooth_l = interpolate_outliers(self.angles, self.inductance)   
         size = len(smooth_l)
         self.L = np.zeros((size,size))
@@ -84,24 +87,30 @@ class simulated_wg(object):
     def test_interpolate(self,plot_me = True):
         potted = self.capacitance
         voltage = interpolate_outliers(self.angles,potted, plot_me = plot_me)
-        plt.plot(self.angles,voltage, self.angles, potted)
-        ax = plt.gca()
-        ax.set_ylim(min(voltage)-abs(min(voltage)*.05), max(voltage)*1.05)
-        plt.show()
+        if plot_me:
+            plt.plot(self.angles,voltage, self.angles, potted)
+            ax = plt.gca()
+            ax.set_ylim(min(voltage)-abs(min(voltage)*.05), max(voltage)*1.05)
+            plt.title("Test of Interpolation")            
+            plt.show()
         
-    def get_frequencies(self):
-        print "inv C"
-        print np.linalg.inv(self.C)
+    def get_frequencies(self,verbose = False):
         LC = np.dot(np.linalg.inv(self.C),self.L)
-        print "LC"        
-        print LC
         self.evals = -np.linalg.eigvals(LC)
         self.calc_freq = np.sqrt(-self.evals)/(2*np.pi)
         plt.figure()
         plt.plot(np.sort(self.calc_freq))
+        plt.title("Frequency Eigenmodes")
+        plt.xlabel("Eigenmode index")
+        plt.ylabel("Frequency (Hz)")
         plt.show()
-        print "frequencies:"
-        print np.sort(self.calc_freq)
+        if verbose:
+            print "inv C"
+            print np.linalg.inv(self.C)
+            print "LC"
+            print LC
+            print "frequencies:"
+            print np.sort(self.calc_freq)
         return np.sort(self.calc_freq)
 
 def interpolate_outliers(angle, data, threshold=.5, window = 12, plot_me = False):

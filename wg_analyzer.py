@@ -14,20 +14,24 @@ import pandas as pd
 from wg_simulator import simulated_wg
 from parametricTest import waveguide
 
-wg = waveguide() 
-#wg.compute_LCVI()      
-#print wg.inductance
-#wg.save()
-wg.load()   
-wg.plot()
-modes = wg.eigenmodes[0]
-hfss.release()
-sim_wg = simulated_wg()
-#sim_wg.test_interpolate()
-sim_wg.build_L_mat()
-sim_wg.build_C_mat()
-freq = sim_wg.get_frequencies()[1:3]/10**9
-print "Simulated Frequencies:", freq
-print "HFSS Frequencies:", modes
-diff = (freq-modes)/freq
-print diff
+def main():
+    wg = waveguide() 
+    #wg.compute_LCVI()      
+    #print wg.inductance
+    #wg.save()
+    wg.load()   
+    #wg.plot()
+    modes = wg.eigenmodes[0]
+    hfss.release()
+    sim_wg = simulated_wg()
+    #sim_wg.test_interpolate()
+    sim_wg.build_L_mat()
+    sim_wg.build_C_mat()
+    freq = sim_wg.get_frequencies()[1:3]/10**9
+    print "Simulated Frequencies:", freq
+    print "HFSS Frequencies:", modes
+    diff = (freq-modes)/freq
+    print "Difference:", diff
+    
+if __name__ == "__main__":
+    main()    

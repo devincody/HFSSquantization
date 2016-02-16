@@ -62,10 +62,10 @@ class simulated_wg(object):
         smooth_l = interpolate_outliers(self.angles, self.inductance)   
         size = len(smooth_l)
         self.L = np.zeros((size,size))
-        d_l = 5.89*.001*2*np.pi/100
-        v = (d_l*5*10**(-8))**-1
+        d_l = 0.001#5.89*.001*2*np.pi/100
         #v = 1;
         for i in range(size):
+            v                     = (d_l*(.4+.05*.4*np.random.randn())*np.pi*10**(-7))**-1
             self.L[i][i]          +=  v
             self.L[(i+1)%size][i] += -v
             self.L[i][(i+1)%size] += -v
@@ -76,16 +76,16 @@ class simulated_wg(object):
         smooth_c = interpolate_outliers(self.angles, self.capacitance)
         size = len(smooth_c)
         self.C = np.zeros((size,size))
-        d_l = 5.89*.001*2*np.pi/100
+        d_l = 0.001#5.89*.001*2*np.pi/100
         for i in range(size):
-            self.C[i][i] = (d_l*2.3*10**(-10))
+            self.C[i][i] = (d_l*(10+.05*10*np.random.randn())*8.8541878176*10**(-12))
             #self.C[(i+1)%size][i] += -(d_l*2.3*10**(-10))
             #self.C[i][(i+1)%size] += -(d_l*2.3*10**(-10))
             #self.C[(i+1)%size][(i+1)%size] += (d_l*2.3*10**(-10))
         print "C:", self.C
 
     def test_interpolate(self,plot_me = True):
-        potted = self.capacitance
+        potted = self.inductance
         voltage = interpolate_outliers(self.angles,potted, plot_me = plot_me)
         if plot_me:
             plt.plot(self.angles,voltage, self.angles, potted)
@@ -155,9 +155,9 @@ def interpolate_outliers(angle, data, threshold=.5, window = 12, plot_me = False
 def main():
     sim_wg = simulated_wg()
     sim_wg.test_interpolate()
-    sim_wg.build_L_mat()
-    sim_wg.build_C_mat()
-    sim_wg.get_frequencies()
+    sim_wg.build_L_mat_test()
+    sim_wg.build_C_mat_test()
+    sim_wg.get_frequencies(verbose = True)
     
 if __name__ == "__main__":
     main()            

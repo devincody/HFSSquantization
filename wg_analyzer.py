@@ -18,12 +18,12 @@ def main():
     wg = waveguide() 
     #wg.compute_LCVI()      
     #print wg.inductance
-    #wg.save()
-    wg.load()   
+    #wg.save(0)
+    wg.load(1)   
     #wg.plot()
     modes = wg.eigenmodes[0][0:2]
     hfss.release()
-    sim_wg = simulated_wg()
+    sim_wg = simulated_wg(0)
     sim_wg.test_interpolate()
     sim_wg.build_L_mat()
     sim_wg.build_C_mat()

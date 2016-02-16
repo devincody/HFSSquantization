@@ -12,24 +12,24 @@ from scipy.interpolate import interp1d
 import pandas as pd
 
 class simulated_wg(object):
-    def __init__(self):
+    def __init__(self, name_variable = 0):
         prefix = "../data/parameters"
-        name = prefix + "capacitance" + ".npy"
+        name = prefix + "capacitance" + str(name_variable) + ".npy"
         self.capacitance = np.load(name)
-        name = prefix + "voltage" + ".npy"
+        name = prefix + "voltage" + str(name_variable) + ".npy"
         self.voltage = np.load(name)
-        name = prefix + "inductance" + ".npy"
+        name = prefix + "inductance" + str(name_variable) + ".npy"
         self.inductance = np.load(name)
-        name = prefix + "current" + ".npy"
+        name = prefix + "current" + str(name_variable) + ".npy"
         self.current = np.load(name)
-        name = "../data/parametersangles.npy"
+        name = "../data/parametersangles" + str(name_variable) + ".npy"
         self.angles = np.load(name)
-        name = "../data/parameterseigenmodes.npy"
+        name = "../data/parameterseigenmodes" + str(name_variable) + ".npy"
         self.eigenmodes = np.load(name)
     
     def build_L_mat(self, verbose = False):
         smooth_l = interpolate_outliers(self.angles, self.inductance)  
-        #smooth_l = interpolate_outliers(self.angles, smooth_l) 
+        smooth_l = interpolate_outliers(self.angles, smooth_l) 
         size = len(smooth_l)
         self.L = np.zeros((size,size))
         d_l = 5.89*.001*2*np.pi/100
@@ -46,7 +46,7 @@ class simulated_wg(object):
 
     def build_C_mat(self, verbose = False):
         smooth_c = interpolate_outliers(self.angles, self.capacitance)
-        #smooth_c = interpolate_outliers(self.angles, smooth_c)        
+        smooth_c = interpolate_outliers(self.angles, smooth_c)        
         size = len(smooth_c)
         self.C = np.zeros((size,size))
         d_l = 5.89*.001*2*np.pi/100
@@ -60,6 +60,7 @@ class simulated_wg(object):
             
     def build_L_mat_test(self,verbose = False):
         smooth_l = interpolate_outliers(self.angles, self.inductance)   
+        smooth_l = interpolate_outliers(self.angles, smooth_l)
         size = len(smooth_l)
         self.L = np.zeros((size,size))
         d_l = 0.001#5.89*.001*2*np.pi/100
@@ -85,8 +86,9 @@ class simulated_wg(object):
         print "C:", self.C
 
     def test_interpolate(self,plot_me = True):
-        potted = self.inductance
-        voltage = interpolate_outliers(self.angles,potted, plot_me = plot_me)
+        potted = self.capacitance
+        voltage = interpolate_outliers(self.angles,potted, plot_me = False)
+        voltage = interpolate_outliers(self.angles,voltage, plot_me = False)
         if plot_me:
             plt.plot(self.angles,voltage, self.angles, potted)
             ax = plt.gca()
@@ -98,13 +100,13 @@ class simulated_wg(object):
         LC = np.dot(np.linalg.inv(self.C),self.L)
         self.evals = -np.linalg.eigvals(LC)
         self.calc_freq = np.sqrt(-self.evals)/(2*np.pi)
-        plt.figure()
-        plt.plot(np.sort(self.calc_freq))
-        plt.title("Frequency Eigenmodes")
-        plt.xlabel("Eigenmode index")
-        plt.ylabel("Frequency (Hz)")
-        plt.show()
         if verbose:
+            plt.figure()
+            plt.plot(np.sort(self.calc_freq)[0:8]/(10**9))
+            plt.title("Frequency Eigenmodes")
+            plt.xlabel("Eigenmode index")
+            plt.ylabel("Frequency (Hz)")
+            plt.show()
             print "inv C"
             print np.linalg.inv(self.C)
             print "LC"

@@ -84,6 +84,7 @@ class waveguide(object):
         return C, V
 
     def compute_LCVI(self, verbose = False):
+        print "Compute LCVI"
         for i in self.angles:
             self.design.set_variable('th',(u'%.2fdeg' % (i)))
             fields = self.setup.get_fields()

@@ -161,6 +161,12 @@ class waveguide(object):
         self.inductance = np.load(name)
         name = prefix + "current"+ str(name_variable) + ".npy"
         self.current = np.load(name)
+        
+    def set_scalex(self, value):
+        self.design.set_variable('scalex',(u'%.4f' % (value)))
+        
+    def set_scalez(self, value):
+        self.design.set_variable('scalexz',(u'%.4f' % (value)))
 
 def reject_outliers(angle, data, m=2):
     angle2 = []

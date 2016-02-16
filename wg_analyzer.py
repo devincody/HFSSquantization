@@ -21,10 +21,10 @@ def main():
     #wg.save()
     wg.load()   
     #wg.plot()
-    modes = wg.eigenmodes[0]
+    modes = wg.eigenmodes[0][0:2]
     hfss.release()
     sim_wg = simulated_wg()
-    #sim_wg.test_interpolate()
+    sim_wg.test_interpolate()
     sim_wg.build_L_mat()
     sim_wg.build_C_mat()
     freq = sim_wg.get_frequencies()[1:3]/10**9

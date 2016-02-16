@@ -83,7 +83,7 @@ class waveguide(object):
         self.design.Clear_Field_Clac_Stack()
         return C, V
 
-    def compute_LCVI(self):
+    def compute_LCVI(self, verbose = False):
         for i in self.angles:
             self.design.set_variable('th',(u'%.2fdeg' % (i)))
             fields = self.setup.get_fields()
@@ -93,12 +93,13 @@ class waveguide(object):
             self.voltage.append(V)
             self.inductance.append(L)
             self.current.append(I)
-            print "#################"
-            print "Angle: " , i
-            print "voltage:", V
-            print "current:", I
-            print "capacitance:", C
-            print "inductance:", L
+            if (verbose):
+                print "#################"
+                print "Angle: " , i
+                print "voltage:", V
+                print "current:", I
+                print "capacitance:", C
+                print "inductance:", L
     
     def plot(self,scale_factor = 1.2):
         labels = ["Capacitance", "Voltage", "Inductance", "Current"]
@@ -136,28 +137,28 @@ class waveguide(object):
         plt.plot(ang, cur)
         plt.show()
         
-    def save(self):
+    def save(self, name_variable = 0):
         prefix = "../data/parameters"
         labels = ["capacitance", "voltage", "inductance", "current"]
         for i in labels:
-            name = prefix + i + ".npy"
+            name = prefix + i + str(name_variable) + ".npy"
             ii = "self." + i
             np.save(name, eval(ii))
-        name = "../data/parametersangles.npy"
+        name = "../data/parametersangles"+ str(name_variable) + ".npy"
         np.save(name, self.angles)
-        name = "../data/parameterseigenmodes.npy"
+        name = "../data/parameterseigenmodes"+ str(name_variable) + ".npy"
         np.save(name, self.eigenmodes)
     
-    def load(self):
+    def load(self, name_variable = 0):
         prefix = "../data/parameters"
         #labels = ["capacitance", "voltage", "inductance", "current"]
-        name = prefix + "capacitance" + ".npy"
+        name = prefix + "capacitance"+ str(name_variable) + ".npy"
         self.capacitance = np.load(name)
-        name = prefix + "voltage" + ".npy"
+        name = prefix + "voltage"+ str(name_variable) + ".npy"
         self.voltage = np.load(name)
-        name = prefix + "inductance" + ".npy"
+        name = prefix + "inductance"+ str(name_variable) + ".npy"
         self.inductance = np.load(name)
-        name = prefix + "current" + ".npy"
+        name = prefix + "current"+ str(name_variable) + ".npy"
         self.current = np.load(name)
 
 def reject_outliers(angle, data, m=2):

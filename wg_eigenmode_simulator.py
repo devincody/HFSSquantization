@@ -3,8 +3,8 @@
 Created on Mon Feb 01 20:49:48 2016
 @author: Devin
 
-
-
+Eigenmode simulator
+Takes in LCVI arrays and builds LC arrays, solves for eigenmodes
 """
 import sys
 if ~(r'F:\Documents\Yale\Junior Year\HFSSpython\pyHFSS' in sys.path):

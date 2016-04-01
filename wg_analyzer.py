@@ -2,6 +2,9 @@
 """
 Created on Wed Feb 10 12:23:19 2016
 @author: Devin
+
+Code that Utilizes functions in wg_eigenmode_simulator.py adn LCVI_array_builder.py
+to analyze some properties of the waveguide
 """
 
 import sys

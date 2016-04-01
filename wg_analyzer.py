@@ -14,8 +14,8 @@ import hfss, numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 import pandas as pd
-from wg_simulator import simulated_wg
-from parametricTest import waveguide
+from wg_eigenmode_simulator import simulated_wg
+from LCVI_array_builder import waveguide
 
 def main():
     Load_sim_number = 1
@@ -71,6 +71,40 @@ def optimize_scalex():
     plt.plot(values, frequency_vector)
     plt.show()
     
-
+def optimize_scalez():
+    Load_sim_number = 1
+    wg = waveguide() 
+    frequency_vector = []
+    nValues = 11
+    values = np.linspace(0.0,.01,nValues)
+    for i in range(nValues):
+        wg = waveguide() 
+        z = values[i]
+        wg.set_scalez(z)
+        wg.compute_LCVI()      
+        wg.save(Load_sim_number)
+        #wg.load(Load_sim_number)
+        #wg.plot()
+        modes = wg.eigenmodes[0][0:2]
+        
+        sim_wg = simulated_wg(Load_sim_number)
+        #sim_wg.test_interpolate()
+        sim_wg.build_L_mat()
+        sim_wg.build_C_mat()
+        freq = sim_wg.get_frequencies()[1:3]/10**9
+        print "Simulated Frequencies:", freq
+        print "HFSS Frequencies:", modes
+        diff = (freq-modes)/freq
+        print "Difference:", diff
+        frequency_vector.append(freq)
+        
+    hfss.release() 
+    print frequency_vector
+    np.save("../data/frequencyvector", frequency_vector)
+    plt.plot(values, frequency_vector)
+    plt.show()
+    
 if __name__ == "__main__":
-    main()    
+    optimize_scalex()
+    optimize_scalez()
+    #main()    

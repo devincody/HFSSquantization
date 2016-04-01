@@ -149,7 +149,8 @@ class waveguide(object):
         np.save(name, self.angles)
         name = "../data/parameterseigenmodes"+ str(name_variable) + ".npy"
         np.save(name, self.eigenmodes)
-    
+        print self.capacitance        
+        
     def load(self, name_variable = 0):
         prefix = "../data/parameters"
         #labels = ["capacitance", "voltage", "inductance", "current"]
@@ -166,7 +167,7 @@ class waveguide(object):
         self.design.set_variable('scalex',(u'%.4f' % (value)))
         
     def set_scalez(self, value):
-        self.design.set_variable('scalexz',(u'%.4f' % (value)))
+        self.design.set_variable('scalez',(u'%.4f' % (value)))
 
 def reject_outliers(angle, data, m=2):
     angle2 = []

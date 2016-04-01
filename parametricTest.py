@@ -5,7 +5,7 @@ Created on Fri Jan 22 16:38:28 2016
 @author: Devin Cody
 """
 #from hfss import *
-import sys
+import sys  
 if ~(r'F:\Documents\Yale\Junior Year\HFSSpython\pyHFSS' in sys.path):
     sys.path.append(r'F:\Documents\Yale\Junior Year\HFSSpython\pyHFSS')
 import hfss, numpy as np

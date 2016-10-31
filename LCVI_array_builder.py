@@ -8,8 +8,8 @@ Code to handle geometry analyssis of HFSS circular waveguides
 """
 #from hfss import *
 import sys  #use sys to make sure the HFSS library is in the sys path
-if ~(r'F:\Documents\Yale\Junior Year\HFSSpython\pyHFSS' in sys.path):
-    sys.path.append(r'F:\Documents\Yale\Junior Year\HFSSpython\pyHFSS')
+if ~(r'F:\Documents\Yale\Devoret_Research\HFSSpython\pyHFSS' in sys.path):
+    sys.path.append(r'F:\Documents\Yale\Devoret_Research\HFSSpython\pyHFSS')
 import hfss, numpy as np
 import matplotlib.pyplot as plt
 from hfss import get_active_design
@@ -62,11 +62,12 @@ class waveguide(object):
         returns current as secondary parameter'''  
         self.design.Clear_Field_Clac_Stack()
         I = self.calc_current(fields, line)
+        #print "current", I
         mu = 4*np.pi*10**-7
         Mag_H_Sq = fields.Mag_H ** 2
         Surf_H = Mag_H_Sq.integrate_surf(surf)
         preinductance = Surf_H.evaluate(phase = 90)
-        L = preinductance*mu/(I**2)   
+        L = preinductance*mu/(I**2 + 4*10**-14) 
         self.design.Clear_Field_Clac_Stack()
         return L, I
         
@@ -82,10 +83,11 @@ class waveguide(object):
         Surf_E = Mag_E_Sq.integrate_surf(surf)
         precapacitance = Surf_E.evaluate()
         C = precapacitance*epsilon/(V**2)
+        #print "voltage", V
         self.design.Clear_Field_Clac_Stack()
         return C, V
 
-    def compute_LCVI(self, verbose = False):
+    def compute_LCVI(self, verbose = False, cap_surf = "CrossSecIntSurf", ind_surf = "CrossSecIntSurf1"):
         '''
         Utilizes calc_capacitance, calc_inductance, etc. functions to calcualte
         The LCVI data for the given setup/active design
@@ -94,8 +96,8 @@ class waveguide(object):
         for i in self.angles:
             self.design.set_variable('th',(u'%.2fdeg' % (i)))
             fields = self.setup.get_fields()
-            C, V = self.calc_capacitance(fields)
-            L, I = self.calc_inductance(fields)
+            C, V = self.calc_capacitance(fields, surf = cap_surf)
+            L, I = self.calc_inductance(fields, surf = ind_surf)
             self.capacitance.append(C)
             self.voltage.append(V)
             self.inductance.append(L)
@@ -107,6 +109,11 @@ class waveguide(object):
                 print "current:", I
                 print "capacitance:", C
                 print "inductance:", L
+        a=np.fft.fft(self.inductance)
+        np.save("../data/fft", a)
+        print a
+        plt.plot(a)
+        plt.show()
     
     def plot(self,scale_factor = 1.2):
         '''
@@ -161,7 +168,7 @@ class waveguide(object):
         np.save(name, self.angles)
         name = "../data/parameterseigenmodes"+ str(name_variable) + ".npy"
         np.save(name, self.eigenmodes)
-        print self.capacitance        
+        #print self.capacitance        
         
     def load(self, name_variable = 0):
         '''
@@ -195,6 +202,15 @@ def reject_outliers(angle, data, m=2):
             data2.append(data[i])
             angle2.append(angle[i])
     return angle2, data2
+    
+def moving_average(x, n):
+    y = np.zeros(len(x))
+    for i in range(len(x)):
+        summ = 0
+        for j in range(n):
+            summ += x[int(i-n/2+j)%len(x)]
+        y[i] = summ/n
+    return y
 
 def main():
     wg = waveguide() 

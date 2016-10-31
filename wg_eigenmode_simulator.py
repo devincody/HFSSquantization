@@ -7,8 +7,8 @@ Eigenmode simulator
 Takes in LCVI arrays and builds LC arrays, solves for eigenmodes
 """
 import sys
-if ~(r'F:\Documents\Yale\Junior Year\HFSSpython\pyHFSS' in sys.path):
-    sys.path.append(r'F:\Documents\Yale\Junior Year\HFSSpython\pyHFSS')
+if ~(r'F:\Documents\Yale\Devoret_Research\HFSSpython\pyHFSS' in sys.path):
+    sys.path.append(r'F:\Documents\Yale\Devoret_Research\HFSSpython\pyHFSS')
 import hfss, numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
@@ -31,11 +31,11 @@ class simulated_wg(object):
         self.eigenmodes = np.load(name)
     
     def build_L_mat(self, verbose = False):
-        smooth_l = interpolate_outliers(self.angles, self.inductance)  
-        smooth_l = interpolate_outliers(self.angles, smooth_l) 
+        smooth_l = interpolate_outliers(self.angles, self.inductance, plot_me = verbose)  
+        smooth_l = moving_average(smooth_l, 6, plot_me = verbose) 
         size = len(smooth_l)
         self.L = np.zeros((size,size))
-        d_l = 5.89*.001*2*np.pi/100
+        d_l = 5.89*.001*2*np.pi/len(self.angles) ##average circumfrence divided by numb nodes
         #v = (d_l*5*10**(-8))**-1
         #v = 1;
         for i in range(size):
@@ -48,11 +48,11 @@ class simulated_wg(object):
             print "L:", self.L
 
     def build_C_mat(self, verbose = False):
-        smooth_c = interpolate_outliers(self.angles, self.capacitance)
-        smooth_c = interpolate_outliers(self.angles, smooth_c)        
+        smooth_c = interpolate_outliers(self.angles, self.capacitance, plot_me = verbose)
+        smooth_c = moving_average(smooth_c, 6, plot_me = verbose)        
         size = len(smooth_c)
         self.C = np.zeros((size,size))
-        d_l = 5.89*.001*2*np.pi/100
+        d_l = 5.89*.001*2*np.pi/len(self.angles)  ##average circumfrence divided by numb nodes
         for i in range(size):
             self.C[i][i] = (d_l*smooth_c[i])
             #self.C[(i+1)%size][i] += -(d_l*2.3*10**(-10))
@@ -150,12 +150,24 @@ def interpolate_outliers(angle, data, threshold=.5, window = 12, plot_me = False
     if (plot_me == True):
         figsize = (7, 2.75)
         fig, ax = plt.subplots(figsize=figsize)
-        df['parameter'].plot()
+        df['parameter'].plot(title = "cleaned vs unclean Parameter")
         df['cleaned_parameter'].plot()
         ax.set_ylim(min(df['cleaned_parameter']), max(df['cleaned_parameter']))
     return np.array(df['cleaned_parameter'])
 
-
+def moving_average(x, n, plot_me):
+    y = np.zeros(len(x))
+    for i in range(len(x)):
+        summ = 0
+        for j in range(n):
+            summ += x[int(i-n/2+j)%len(x)]
+        y[i] = summ/n
+    if (plot_me == True):
+        figsize = (7, 2.75)
+        fig, ax = plt.subplots(figsize=figsize)
+        plt.plot(x, 'g', y,'r')
+        plt.title("moving average")
+    return y
         
 def main():
     sim_wg = simulated_wg()

@@ -21,7 +21,7 @@ class waveguide(object):
         self.design = get_active_design()           #get active design in file
         self.name = self.design.get_setup_names()   #get solution setup name
         self.setup = self.design.get_setup(self.name[0])
-        self.angles = np.linspace(angle_s, angle_e, angle_n) #set up angles
+        self.angles = np.linspace(angle_s, angle_e-angle_e/angle_n, angle_n) #set up angles
         self.capacitance = []       #Array of capacitances
         self.voltage = []           #Array of voltages
         self.inductance = []        #arry of inductance
@@ -52,6 +52,19 @@ class waveguide(object):
         comp = fields.Vector_H
         exp = comp.integrate_line_tangent(line)
         I = exp.evaluate(phase = 90)
+        self.design.Clear_Field_Clac_Stack()
+        return I
+    
+    def calc_cur(self, fields):
+        '''Second Iteration of Function to calculate WaveGuide Capacitance
+        surf = integration surface between plates 
+        line = integration line between plates
+        returns voltage as secondary parameter''' 
+        self.design.Clear_Field_Clac_Stack()  
+        cur_named_expression = "Cur"
+        fields.declare_named_expression(cur_named_expression)
+        temp = fields.named_expression[cur_named_expression]
+        I = temp.evaluate(phase = 90)
         self.design.Clear_Field_Clac_Stack()
         return I
     
@@ -86,6 +99,44 @@ class waveguide(object):
         #print "voltage", V
         self.design.Clear_Field_Clac_Stack()
         return C, V
+        
+    def calc_C2(self,fields, surf = "CrossSecIntSurf", line = "intLineVolt"):
+        '''Second Iteration of Function to calculate WaveGuide Capacitance
+        surf = integration surface between plates 
+        line = integration line between plates
+        returns voltage as secondary parameter''' 
+        self.design.Clear_Field_Clac_Stack()
+        V = self.calc_voltage(fields, line)    
+        capacitance_named_expression = "CapVot3"  
+        fields.declare_named_expression(capacitance_named_expression)
+        temp = fields.named_expression[capacitance_named_expression]
+        precapacitance = temp.evaluate()
+        C = precapacitance/(V**2)
+        #print "voltage", V
+        #print "cap", C
+        self.design.Clear_Field_Clac_Stack()
+        return C, V
+        
+    def calc_L2(self,fields, surf = "CrossSecIntSurf1", line = "IntLineCurrent"):
+        '''Second Iteration of Function to calculate WaveGuide Inductance
+        surf = integration surface between plates 
+        line = integration line between plates
+        returns Current as secondary parameter''' 
+        self.design.Clear_Field_Clac_Stack()
+        I = self.calc_current(fields) 
+        print "H field current", I
+        #I = self.calc_cur(fields)    
+        print "Jsurf current", I
+        inductance_named_expression = "IndCur3"  
+        fields.declare_named_expression(inductance_named_expression)
+        temp = fields.named_expression[inductance_named_expression]
+        preinductance = temp.evaluate(phase = 90)
+        L = preinductance/(I**2 + 1*10**-14)
+        #print "Current", I
+        #print "pre indu", preinductance
+        #print "ind", L
+        self.design.Clear_Field_Clac_Stack()
+        return L, I
 
     def compute_LCVI(self, verbose = False, cap_surf = "CrossSecIntSurf", ind_surf = "CrossSecIntSurf1"):
         '''
@@ -96,8 +147,8 @@ class waveguide(object):
         for i in self.angles:
             self.design.set_variable('th',(u'%.2fdeg' % (i)))
             fields = self.setup.get_fields()
-            C, V = self.calc_capacitance(fields, surf = cap_surf)
-            L, I = self.calc_inductance(fields, surf = ind_surf)
+            C, V = self.calc_C2(fields, surf = cap_surf)
+            L, I = self.calc_L2(fields, surf = ind_surf)
             self.capacitance.append(C)
             self.voltage.append(V)
             self.inductance.append(L)
@@ -109,11 +160,6 @@ class waveguide(object):
                 print "current:", I
                 print "capacitance:", C
                 print "inductance:", L
-        a=np.fft.fft(self.inductance)
-        np.save("../data/fft", a)
-        print a
-        plt.plot(a)
-        plt.show()
     
     def plot(self,scale_factor = 1.2):
         '''

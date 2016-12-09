@@ -32,7 +32,7 @@ class simulated_wg(object):
     
     def build_L_mat(self, verbose = False):
         smooth_l = interpolate_outliers(self.angles, self.inductance, plot_me = verbose)  
-        smooth_l = moving_average(smooth_l, 6, plot_me = verbose) 
+        smooth_l = moving_average(smooth_l, int(6*len(self.angles)/100.), plot_me = verbose) 
         size = len(smooth_l)
         self.L = np.zeros((size,size))
         d_l = 5.89*.001*2*np.pi/len(self.angles) ##average circumfrence divided by numb nodes
@@ -47,17 +47,26 @@ class simulated_wg(object):
         if verbose:
             print "L:", self.L
 
+    def build_C_mat_parallel(self, verbose = False):
+        smooth_c = interpolate_outliers(self.angles, self.capacitance, plot_me = verbose)
+        smooth_c = moving_average(smooth_c, int(6*len(self.angles)/100.), plot_me = verbose)        
+        size = len(smooth_c)
+        self.C = np.zeros((size,size))
+        d_l = 5.89*.001*2*np.pi/len(self.angles)  ##average circumfrence divided by numb nodes
+        for i in range(size):
+            self.C[i][i] = (d_l*smooth_c[i]/2)
+            self.C[(i-1)%size][(i-1)%size] += (d_l*smooth_c[i]/2)
+        if verbose:
+            print "C:", self.C
+
     def build_C_mat(self, verbose = False):
         smooth_c = interpolate_outliers(self.angles, self.capacitance, plot_me = verbose)
-        smooth_c = moving_average(smooth_c, 6, plot_me = verbose)        
+        smooth_c = moving_average(smooth_c, int(6*len(self.angles)/100.), plot_me = verbose)        
         size = len(smooth_c)
         self.C = np.zeros((size,size))
         d_l = 5.89*.001*2*np.pi/len(self.angles)  ##average circumfrence divided by numb nodes
         for i in range(size):
             self.C[i][i] = (d_l*smooth_c[i])
-            #self.C[(i+1)%size][i] += -(d_l*2.3*10**(-10))
-            #self.C[i][(i+1)%size] += -(d_l*2.3*10**(-10))
-            #self.C[(i+1)%size][(i+1)%size] += (d_l*2.3*10**(-10))
         if verbose:
             print "C:", self.C
             
@@ -167,6 +176,7 @@ def moving_average(x, n, plot_me):
         fig, ax = plt.subplots(figsize=figsize)
         plt.plot(x, 'g', y,'r')
         plt.title("moving average")
+        plt.show()
     return y
         
 def main():

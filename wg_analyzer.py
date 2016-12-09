@@ -44,9 +44,9 @@ def optimize_scalex():
     Load_sim_number = 1
     wg = waveguide() 
     frequency_vector = []
-    nValues = 11
-    values = np.linspace(0.0,.001,nValues)
-    scale_z = 0.0005
+    nValues = 4
+    values = np.linspace(0.0,.0003,nValues)
+    scale_z = 0.000
     wg.set_scalez(scale_z)
     for i in range(nValues):
         wg = waveguide() 
@@ -60,8 +60,8 @@ def optimize_scalex():
         
         sim_wg = simulated_wg(Load_sim_number)
         #sim_wg.test_interpolate()
-        sim_wg.build_L_mat(verbose = True)
-        sim_wg.build_C_mat(verbose = True)
+        sim_wg.build_L_mat(verbose = False)
+        sim_wg.build_C_mat(verbose = False)
         freq_tmp = sim_wg.get_frequencies()
         if (freq_tmp[0] > 3*(10**9)):
             freq = freq_tmp[0:2]/10**9
@@ -74,7 +74,7 @@ def optimize_scalex():
         print "scalez", scale_z
         print "Eigenmode Frequencies:", freq
         print "HFSS Frequencies:", modes
-        diff = (freq-modes)/freq
+        diff = np.abs(100*(freq-modes)/modes)
         print "Difference:", diff
         frequency_vector.append(diff)
         
@@ -83,7 +83,11 @@ def optimize_scalex():
     print values
     print frequency_vector
     np.save("../data/frequencyvector", frequency_vector)
-    plt.plot(values, frequency_vector)
+    fig1 = plt.figure()
+    ax1 = fig1.add_subplot(111)
+    ax1.plot(values, frequency_vector)
+    plt.xlabel("scalex")
+    plt.ylabel("error")  
     plt.show()
     
 def optimize_scalez():
@@ -91,9 +95,9 @@ def optimize_scalez():
     Load_sim_number = 1
     wg = waveguide() 
     frequency_vector = []
-    nValues = 11
-    values = np.linspace(0.0000,.0005,nValues)
-    scale_x = 0.0005
+    nValues = 3
+    values = np.linspace(0.000,.0001,nValues)
+    scale_x = 0.0001
     wg.set_scalex(scale_x)
     for i in range(nValues):
         wg = waveguide() 
@@ -109,8 +113,8 @@ def optimize_scalez():
         
         sim_wg = simulated_wg(Load_sim_number)
         #sim_wg.test_interpolate()
-        sim_wg.build_L_mat(verbose = True)
-        sim_wg.build_C_mat(verbose = True)
+        sim_wg.build_L_mat(verbose = False)
+        sim_wg.build_C_mat(verbose = False)
         freq_tmp = sim_wg.get_frequencies()
         if (freq_tmp[0] > 3*(10**9)):
             freq = freq_tmp[0:2]/10**9
@@ -124,7 +128,7 @@ def optimize_scalez():
         print "scalez (opt)", z
         print "Eigenmode Frequencies:", freq
         print "HFSS Frequencies:", modes
-        diff = (freq-modes)/freq
+        diff = 100*(freq-modes)/modes
         print "Difference:", diff
         frequency_vector.append(diff)
         
@@ -133,33 +137,39 @@ def optimize_scalez():
     print values
     print frequency_vector
     np.save("../data/frequencyvector", frequency_vector)
-    plt.plot(values, frequency_vector)
+    fig1 = plt.figure()
+    ax1 = fig1.add_subplot(121)
+    ax1.plot(values, frequency_vector)
+    ax2 = fig1.add_subplot(122)
+    ax2.plot(values, np.abs(frequency_vector))
+    plt.xlabel("scalez")
+    plt.ylabel("error")  
     plt.show()
     
-def One_Trial():
+    
+def One_Trial(N = 100, collect_new_data = True):
     print "One Trial"
     Load_sim_number = 1
     wg = waveguide() 
     frequency_vector = []
-    scale_x = 0.0005
+    scale_x = 0.0001
     wg.set_scalex(scale_x)
-    z = 0.00004
+    z = 0.0001
     wg.set_scalez(z)
-    wg = waveguide(angle_n = 100) 
-    wg.compute_LCVI(cap_surf = "CrossSecIntSurf", ind_surf = "CrossSecIntSurf1")  
-    #wg.load(Load_sim_number)
-    #wg.plot()
-    wg.save(Load_sim_number)
-    #
-    #wg.plot()
+    wg = waveguide(angle_s = 3.6, angle_e = 360,angle_n = N) 
+    if collect_new_data:   
+        wg.compute_LCVI(cap_surf = "CrossSecIntSurf", ind_surf = "CrossSecIntSurf1")  
+        wg.save(Load_sim_number)
+    else:
+        wg.load(Load_sim_number)
+
+    wg.plot()
     modes = wg.eigenmodes[0][0:2]
-    
     sim_wg = simulated_wg(Load_sim_number)
-    #sim_wg.test_interpolate()
-    
+
     #GET LC VALUES and BUILD MATRIX
     sim_wg.build_L_mat(verbose = True)
-    sim_wg.build_C_mat(verbose = True)
+    sim_wg.build_C_mat_parallel(verbose = True)
     freq_tmp = sim_wg.get_frequencies()
     hfss.release() 
     #Get best values
@@ -177,16 +187,16 @@ def One_Trial():
     print "scalez (opt)", z
     print "Eigenmode Frequencies:", freq
     print "HFSS Frequencies:", modes
-    diff = (freq-modes)/freq
-    print "Difference:", diff
+    diff = 100*(freq-modes)/modes
+    print "Percent Difference:", diff
     frequency_vector.append(diff)
         
     np.save("../data/frequencyvector", freq_tmp)
    
     
-    
 if __name__ == "__main__":
-    #One_Trial()
-    optimize_scalex()
+    #One_Trial(100)
+    One_Trial(100, collect_new_data = True)
+    #optimize_scalex()
     #optimize_scalez()
     #main()    

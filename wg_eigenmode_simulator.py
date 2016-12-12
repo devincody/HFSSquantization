@@ -62,14 +62,14 @@ class simulated_wg(object):
             Ljj = 9E-9
             Ljj_side = mu*d*(Width_reduced/Length + (Zperpwid + 2*gapwid)/(Length_reduced))
 
-            print "Ljj_side" Ljj_side
+            print "Ljj_side", Ljj_side
 
             self.L = np.zeros((size+1,size+1))
             for i in range(size+1):
                 if i < qu_theta:
                     #print (d_l*smooth_l[i])**-1
-                    self.L[i][i]          +=  (d_l*smooth_l[i])**-1 +67
-                    self.L[(i-1)%(size+1)][i] += -(d_l*smooth_l[i])**-1 +331
+                    self.L[i][i]          +=  (d_l*smooth_l[i])**-1
+                    self.L[(i-1)%(size+1)][i] += -(d_l*smooth_l[i])**-1
                     self.L[i][(i-1)%(size+1)] += -(d_l*smooth_l[i])**-1
                     self.L[(i-1)%(size+1)][(i-1)%(size+1)] +=  (d_l*smooth_l[i])**-1
                 elif i > qu_theta+1:
@@ -133,7 +133,7 @@ class simulated_wg(object):
             Cjj_side = epsilon*(Length*Width_reduced/2+Length_reduced*(Zperpwid + 2*gapwid))/d
             Cjj = epsilon*(Zperplen*Zperpwid)/d
             Cjj_spacing = .75E-13
-            print "Cjj", Cjj_side, Cjj
+            print "Cjj_side", Cjj_side, "Cjj_spacing", Cjj_spacing
             for i in range(size+1):
                 if i < qu_theta:
                     self.C[i][i] += (d_l*smooth_c[i]/2)

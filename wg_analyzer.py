@@ -176,7 +176,7 @@ def One_Trial(N = 100, collect_new_data = True, qubit = False, qu_theta = 0, ver
     #Get best values
     i = 0
     while (freq_tmp[i] < 5E9):
-        i++
+        i =i+1
         
     freq = freq_tmp[i:i+2]/10**9
     print "%d:%d"%(i,i+2)
@@ -213,12 +213,12 @@ def collect_and_perturb():
     N =100
     #One_Trial(100)
     R = 10
-    z_angles = np.linspace(0,N-R/N,R)
+    z_angles = np.linspace(0,N-N/R,R)
     freq_eigen= []
     freq_hfss = []
     for z_angle in z_angles:       
         design = hfss.get_active_design()
-        design.set_variable('zmonAngle',(u'%.4f' % (z_angle)))
+        design.set_variable('zmonAngle',(u'%.4f' % (z_angle*360/N)))
         f,m = One_Trial(N, collect_new_data = False, qubit = True, qu_theta = z_angle,verbose = False)#(360-z_angle)/360*N)
         print f,m       
         freq_eigen.append(f)
@@ -228,11 +228,11 @@ def collect_and_perturb():
     print "freq eigen", freq_eigen
     print "freq hfss", freq_hfss
     
-    plt.plot(z_angles,freq_eigen)
+    plt.plot((z_angle*360/N),freq_eigen)
     plt.show()    
-    plt.plot(z_angles,freq_hfss)
+    plt.plot((z_angle*360/N),freq_hfss)
     plt.show()    
-    plt.plt(z_angles,freq_eigen,z_angles,freq_hfss)
+    plt.plt((z_angle*360/N),freq_eigen,'r',freq_hfss,'b')
     plt.show()
     
 def single_perturb():
@@ -245,5 +245,5 @@ def single_perturb():
     print "Zmon_angle", z_angle
 
 if __name__ == "__main__":
-    #One_Trial(N, collect_new_data = True, qubit = False, qu_theta = 0*z_angle,verbose = False)
-    collect_and_perturb()
+    One_Trial(N, collect_new_data = False, qubit = True, qu_theta = 0*z_angle,verbose = True)
+    #collect_and_perturb()

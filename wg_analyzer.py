@@ -113,8 +113,8 @@ def optimize_scalez():
         
         sim_wg = simulated_wg(Load_sim_number)
         #sim_wg.test_interpolate()
-        sim_wg.build_L_mat(verbose = False)
-        sim_wg.build_C_mat(verbose = False)
+        sim_wg.build_L_mat(verbose = True)
+        sim_wg.build_C_mat(verbose = True)
         freq_tmp = sim_wg.get_frequencies()
         if (freq_tmp[0] > 3*(10**9)):
             freq = freq_tmp[0:2]/10**9
@@ -147,7 +147,7 @@ def optimize_scalez():
     plt.show()
     
     
-def One_Trial(N = 100, collect_new_data = True):
+def One_Trial(N = 100, collect_new_data = True, qubit = False, qu_theta = 0, verbose = False):
     print "One Trial"
     Load_sim_number = 1
     wg = waveguide() 
@@ -156,47 +156,94 @@ def One_Trial(N = 100, collect_new_data = True):
     wg.set_scalex(scale_x)
     z = 0.0001
     wg.set_scalez(z)
-    wg = waveguide(angle_s = 3.6, angle_e = 360,angle_n = N) 
+    wg = waveguide(angle_s = 0, angle_e = 360,angle_n = N) 
     if collect_new_data:   
         wg.compute_LCVI(cap_surf = "CrossSecIntSurf", ind_surf = "CrossSecIntSurf1")  
         wg.save(Load_sim_number)
     else:
         wg.load(Load_sim_number)
 
-    wg.plot()
+    #wg.plot()
+    wg.update_HFSS_Solutions()
     modes = wg.eigenmodes[0][0:2]
     sim_wg = simulated_wg(Load_sim_number)
 
     #GET LC VALUES and BUILD MATRIX
-    sim_wg.build_L_mat(verbose = True)
-    sim_wg.build_C_mat_parallel(verbose = True)
+    sim_wg.build_L_mat(N, qubit, qu_theta,verbose)
+    sim_wg.build_C_mat_parallel(N, qubit, qu_theta,verbose)
     freq_tmp = sim_wg.get_frequencies()
-    hfss.release() 
+    hfss.release()
     #Get best values
-    if (freq_tmp[0] > 3*(10**9)):
-        freq = freq_tmp[0:2]/10**9
-        print freq_tmp[0]
-        print "0:2"
-    else:
-        freq = freq_tmp[1:3]/10**9
-        print"1:3"
+    i = 0
+    while (freq_tmp[i] < 5E9):
+        i++
+        
+    freq = freq_tmp[i:i+2]/10**9
+    print "%d:%d"%(i,i+2)
         
     #Display Results
-    print freq_tmp # print all HFSS Frequencies
+    
     print "scalex", scale_x
     print "scalez (opt)", z
-    print "Eigenmode Frequencies:", freq
+    if verbose:
+        print freq_tmp
+        print "Eigenmode Frequencies:", freq
+
+
     print "HFSS Frequencies:", modes
     diff = 100*(freq-modes)/modes
     print "Percent Difference:", diff
     frequency_vector.append(diff)
-        
     np.save("../data/frequencyvector", freq_tmp)
+    return freq,modes
    
-    
-if __name__ == "__main__":
+def multi_perturb():
+    N =100
     #One_Trial(100)
-    One_Trial(100, collect_new_data = True)
-    #optimize_scalex()
-    #optimize_scalez()
-    #main()    
+    freq= []
+    for z_angle in range(N):        
+        f = One_Trial(N, collect_new_data = False, qubit = True, qu_theta = z_angle)#(360-z_angle)/360*N)
+        print f        
+        freq.append(f)
+    
+    plt.plot(range(N),freq)
+    plt.show()    
+    
+def collect_and_perturb():
+    N =100
+    #One_Trial(100)
+    R = 10
+    z_angles = np.linspace(0,N-R/N,R)
+    freq_eigen= []
+    freq_hfss = []
+    for z_angle in z_angles:       
+        design = hfss.get_active_design()
+        design.set_variable('zmonAngle',(u'%.4f' % (z_angle)))
+        f,m = One_Trial(N, collect_new_data = False, qubit = True, qu_theta = z_angle,verbose = False)#(360-z_angle)/360*N)
+        print f,m       
+        freq_eigen.append(f)
+        freq_hfss.append(m)
+    
+    print "Z_angles", z_angles
+    print "freq eigen", freq_eigen
+    print "freq hfss", freq_hfss
+    
+    plt.plot(z_angles,freq_eigen)
+    plt.show()    
+    plt.plot(z_angles,freq_hfss)
+    plt.show()    
+    plt.plt(z_angles,freq_eigen,z_angles,freq_hfss)
+    plt.show()
+    
+def single_perturb():
+    design = hfss.get_active_design()
+    z_angle = float(design.get_variable_value('zmonAngle'))
+    N =100
+    freq= []
+    One_Trial(N, collect_new_data = False, qubit = True, qu_theta = (360-z_angle)/360*N,verbose = True)
+
+    print "Zmon_angle", z_angle
+
+if __name__ == "__main__":
+    #One_Trial(N, collect_new_data = True, qubit = False, qu_theta = 0*z_angle,verbose = False)
+    collect_and_perturb()

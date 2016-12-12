@@ -26,6 +26,9 @@ class waveguide(object):
         self.voltage = []           #Array of voltages
         self.inductance = []        #arry of inductance
         self.current = []
+        self.update_HFSS_Solutions()
+    
+    def update_HFSS_Solutions(self):
         try:
             self.solutions = self.setup.get_solutions()     #check if solns exist
             self.eigenmodes = self.solutions.eigenmodes()   #obtain eigenmodes
@@ -34,7 +37,7 @@ class waveguide(object):
             self.setup.analyze()                            #if no solutions, Analyze
             self.solutions = self.setup.get_solutions()
             self.eigenmodes = self.solutions.eigenmodes()
-    
+            
     def calc_voltage(self, fields, line = "intLineVolt"):
         '''Function to calculate WaveGuide Voltage
         line = integration line between plates'''

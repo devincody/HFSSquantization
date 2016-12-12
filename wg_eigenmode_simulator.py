@@ -30,32 +30,134 @@ class simulated_wg(object):
         name = "../data/parameterseigenmodes" + str(name_variable) + ".npy"
         self.eigenmodes = np.load(name)
     
-    def build_L_mat(self, verbose = False):
+    def build_L_mat(self, N = 100, qubit = False, qu_theta = 0, verbose = False):
         smooth_l = interpolate_outliers(self.angles, self.inductance, plot_me = verbose)  
         smooth_l = moving_average(smooth_l, int(6*len(self.angles)/100.), plot_me = verbose) 
-        size = len(smooth_l)
-        self.L = np.zeros((size,size))
-        d_l = 5.89*.001*2*np.pi/len(self.angles) ##average circumfrence divided by numb nodes
-        #v = (d_l*5*10**(-8))**-1
-        #v = 1;
-        for i in range(size):
-            self.L[i][i]          +=  (d_l*smooth_l[i])**-1
-            self.L[(i+1)%size][i] += -(d_l*smooth_l[i])**-1
-            self.L[i][(i+1)%size] += -(d_l*smooth_l[i])**-1
-            self.L[(i+1)%size][(i+1)%size] +=  (d_l*smooth_l[i])**-1
+        
+        if N == -1:
+            size = len(smooth_l)
+        else:
+            size = N
+        d_l = 5.89E-3*2*np.pi/N ##average circumfrence divided by numb nodes
+        
+        if qubit == True:
+            design = hfss.get_active_design()
+            Ravg = float(design.get_variable_value('RavgR').split('mm')[0])*1E-3
+            Rx = float(design.get_variable_value('Rxoff').split('mm')[0])*1E-3
+            Rt = float(design.get_variable_value('Rthick').split('mm')[0])*1E-3
+            d = float(design.get_variable_value('Wspacing').split('mil')[0])*2.54E-5 #meters
+            
+            Zperplen = float(design.get_variable_value('zPerpLen').split('um')[0])*1E-6
+            Zperpwid = float(design.get_variable_value('zPerpWid').split('um')[0])*1E-6
+            gaplen = float(design.get_variable_value('GapLength').split('um')[0])*1E-6
+            gapwid = float(design.get_variable_value('GapWidth').split('um')[0])*1E-6            
+            mu = 4*np.pi*1E-7
+            
+            print (qu_theta*360/N)
+            Length = Ravg + Rt/2 - (Rx*np.cos(qu_theta*360/N)+np.sqrt((Ravg - Rt/2)**2 - Rx**2*np.sin(qu_theta*360/N)**2))
+            Length_reduced = Length - (Zperplen + 2*gaplen)
+            Width = 2*np.pi*Ravg/N
+            Width_reduced = Width - (Zperpwid + 2*gapwid)
+            
+            Ljj = 9E-9
+            Ljj_side = mu*d*(Width_reduced/Length + (Zperpwid + 2*gapwid)/(Length_reduced))
+
+            print "Ljj_side" Ljj_side
+
+            self.L = np.zeros((size+1,size+1))
+            for i in range(size+1):
+                if i < qu_theta:
+                    #print (d_l*smooth_l[i])**-1
+                    self.L[i][i]          +=  (d_l*smooth_l[i])**-1 +67
+                    self.L[(i-1)%(size+1)][i] += -(d_l*smooth_l[i])**-1 +331
+                    self.L[i][(i-1)%(size+1)] += -(d_l*smooth_l[i])**-1
+                    self.L[(i-1)%(size+1)][(i-1)%(size+1)] +=  (d_l*smooth_l[i])**-1
+                elif i > qu_theta+1:
+                    self.L[i][i]          +=  (d_l*smooth_l[i-1])**-1
+                    self.L[(i-1)%(size+1)][i] += -(d_l*smooth_l[i-1])**-1
+                    self.L[i][(i-1)%(size+1)] += -(d_l*smooth_l[i-1])**-1
+                    self.L[(i-1)%(size+1)][(i-1)%(size+1)] +=  (d_l*smooth_l[i-1])**-1
+                elif i == qu_theta:
+                    self.L[(i+1)%(size+1)][(i+1)%(size+1)]         +=  Ljj_side**-1
+                    self.L[(i-1)%(size+1)][(i+1)%(size+1)] += -Ljj_side**-1
+                    self.L[(i+1)%(size+1)][(i-1)%(size+1)] += -Ljj_side**-1
+                    self.L[(i-1)%(size+1)][(i-1)%(size+1)] +=  Ljj_side**-1
+                    
+                    ##draw bridge
+                    self.L[i][i]          +=  Ljj**-1
+                    self.L[(i-1)%(size+1)][i] += -Ljj**-1
+                    self.L[i][(i-1)%(size+1)] += -Ljj**-1
+                    self.L[(i-1)%(size+1)][(i-1)%(size+1)] +=  Ljj**-1
+                    
+        else:
+            self.L = np.zeros((size,size))
+            for i in range(size):
+                self.L[i][i]          +=  (d_l*smooth_l[i])**-1
+                self.L[(i-1)%size][i] += -(d_l*smooth_l[i])**-1
+                self.L[i][(i-1)%size] += -(d_l*smooth_l[i])**-1
+                self.L[(i-1)%size][(i-1)%size] +=  (d_l*smooth_l[i])**-1
             
         if verbose:
             print "L:", self.L
 
-    def build_C_mat_parallel(self, verbose = False):
+    def build_C_mat_parallel(self, N =100, qubit = False, qu_theta = 0, verbose = False):
         smooth_c = interpolate_outliers(self.angles, self.capacitance, plot_me = verbose)
         smooth_c = moving_average(smooth_c, int(6*len(self.angles)/100.), plot_me = verbose)        
-        size = len(smooth_c)
-        self.C = np.zeros((size,size))
+        
+        if N == -1:
+            size = len(smooth_l)
+        else:
+            size = N
+            
         d_l = 5.89*.001*2*np.pi/len(self.angles)  ##average circumfrence divided by numb nodes
-        for i in range(size):
-            self.C[i][i] = (d_l*smooth_c[i]/2)
-            self.C[(i-1)%size][(i-1)%size] += (d_l*smooth_c[i]/2)
+
+        if qubit == True:
+            design = hfss.get_active_design()
+            Ravg = float(design.get_variable_value('RavgR').split('mm')[0])*1E-3
+            Rx = float(design.get_variable_value('Rxoff').split('mm')[0])*1E-3
+            Rt = float(design.get_variable_value('Rthick').split('mm')[0])*1E-3
+            d = float(design.get_variable_value('Wspacing').split('mil')[0])*2.54E-5 #meters
+            
+            Zperplen = float(design.get_variable_value('zPerpLen').split('um')[0])*1E-6
+            Zperpwid = float(design.get_variable_value('zPerpWid').split('um')[0])*1E-6
+            gaplen = float(design.get_variable_value('GapLength').split('um')[0])*1E-6
+            gapwid = float(design.get_variable_value('GapWidth').split('um')[0])*1E-6
+            
+            Length = Ravg + Rt/2 - (Rx*np.cos(qu_theta*360/N)+np.sqrt((Ravg - Rt/2)**2 - Rx**2*np.sin(qu_theta*360/N)**2))
+            Length_reduced = Length - (Zperplen + 2*gaplen)
+            Width = 2*np.pi*Ravg/N
+            Width_reduced = Width - (Zperpwid + 2*gapwid)
+            epsilon = 8.85E-12            
+            
+            self.C = np.zeros((size+1,size+1))
+            Cjj_side = epsilon*(Length*Width_reduced/2+Length_reduced*(Zperpwid + 2*gapwid))/d
+            Cjj = epsilon*(Zperplen*Zperpwid)/d
+            Cjj_spacing = .75E-13
+            print "Cjj", Cjj_side, Cjj
+            for i in range(size+1):
+                if i < qu_theta:
+                    self.C[i][i] += (d_l*smooth_c[i]/2)
+                    self.C[(i-1)%(size+1)][(i-1)%(size+1)] += (d_l*smooth_c[i]/2)
+                elif i > qu_theta+1:
+                    self.C[i][i] += (d_l*smooth_c[i-1]/2)
+                    self.C[(i-1)%(size+1)][(i-1)%(size+1)] += (d_l*smooth_c[i-1]/2)
+                elif i == qu_theta:
+                    self.C[i][i] += Cjj_spacing/2 + Cjj
+                    self.C[(i-1)%(size+1)][i] += -Cjj_spacing/2
+                    self.C[i][(i-1)%(size+1)] += -Cjj_spacing/2
+                    self.C[(i-1)%(size+1)][(i-1)%(size+1)] +=  Cjj_spacing/2 + Cjj_side
+                    
+                    self.C[(i+1)%(size+1)][i] += -Cjj_spacing/2
+                    self.C[i][(i+1)%(size+1)] += -Cjj_spacing/2
+                    self.C[(i+1)%(size+1)][(i+1)%(size+1)] +=  Cjj_spacing/2
+                elif i == qu_theta+1:
+                    self.C[(i)%(size+1)][(i)%(size+1)] +=  Cjj_side
+        else:
+            self.C = np.zeros((size,size))
+            for i in range(size):
+                self.C[i][i] += (d_l*smooth_c[i]/2)
+                self.C[(i-1)%size][(i-1)%size] += (d_l*smooth_c[i]/2)
+                
         if verbose:
             print "C:", self.C
 

@@ -31,6 +31,7 @@ class simulated_wg(object):
         self.eigenmodes = np.load(name)
     
     def build_L_mat(self, N = 100, qubit = False, qu_theta = 0, verbose = False):
+        #smooth the data
         smooth_l = interpolate_outliers(self.angles, self.inductance, plot_me = verbose)  
         smooth_l = moving_average(smooth_l, int(6*len(self.angles)/100.), plot_me = verbose) 
         
@@ -54,7 +55,8 @@ class simulated_wg(object):
             mu = 4*np.pi*1E-7
             
             print (qu_theta*360/N)
-            Length = Ravg + Rt/2 - (Rx*np.cos(qu_theta*360/N)+np.sqrt((Ravg - Rt/2)**2 - Rx**2*np.sin(qu_theta*360/N)**2))
+            Length = Ravg + Rt/2 - (Rx*np.cos(qu_theta*2*np.pi/N)+np.sqrt((Ravg - Rt/2)**2 - (Rx**2)*(np.sin(qu_theta*2*np.pi/N))**2))
+            
             Length_reduced = Length - (Zperplen + 2*gaplen)
             Width = 2*np.pi*Ravg/N
             Width_reduced = Width - (Zperpwid + 2*gapwid)
@@ -78,7 +80,7 @@ class simulated_wg(object):
                     self.L[i][(i-1)%(size+1)] += -(d_l*smooth_l[i-1])**-1
                     self.L[(i-1)%(size+1)][(i-1)%(size+1)] +=  (d_l*smooth_l[i-1])**-1
                 elif i == qu_theta:
-                    self.L[(i+1)%(size+1)][(i+1)%(size+1)]         +=  Ljj_side**-1
+                    self.L[(i+1)%(size+1)][(i+1)%(size+1)] +=  Ljj_side**-1 #inductance of transmission line around island
                     self.L[(i-1)%(size+1)][(i+1)%(size+1)] += -Ljj_side**-1
                     self.L[(i+1)%(size+1)][(i-1)%(size+1)] += -Ljj_side**-1
                     self.L[(i-1)%(size+1)][(i-1)%(size+1)] +=  Ljj_side**-1
@@ -101,6 +103,7 @@ class simulated_wg(object):
             print "L:", self.L
 
     def build_C_mat_parallel(self, N =100, qubit = False, qu_theta = 0, verbose = False):
+        #smooth the data       
         smooth_c = interpolate_outliers(self.angles, self.capacitance, plot_me = verbose)
         smooth_c = moving_average(smooth_c, int(6*len(self.angles)/100.), plot_me = verbose)        
         
@@ -116,23 +119,24 @@ class simulated_wg(object):
             Ravg = float(design.get_variable_value('RavgR').split('mm')[0])*1E-3
             Rx = float(design.get_variable_value('Rxoff').split('mm')[0])*1E-3
             Rt = float(design.get_variable_value('Rthick').split('mm')[0])*1E-3
-            d = float(design.get_variable_value('Wspacing').split('mil')[0])*2.54E-5 #meters
+            d = float(design.get_variable_value('Wspacing').split('mil')[0])*2.54E-5
             
             Zperplen = float(design.get_variable_value('zPerpLen').split('um')[0])*1E-6
             Zperpwid = float(design.get_variable_value('zPerpWid').split('um')[0])*1E-6
             gaplen = float(design.get_variable_value('GapLength').split('um')[0])*1E-6
             gapwid = float(design.get_variable_value('GapWidth').split('um')[0])*1E-6
             
-            Length = Ravg + Rt/2 - (Rx*np.cos(qu_theta*360/N)+np.sqrt((Ravg - Rt/2)**2 - Rx**2*np.sin(qu_theta*360/N)**2))
-            Length_reduced = Length - (Zperplen + 2*gaplen)
-            Width = 2*np.pi*Ravg/N
+            #define demsions of node in which qubit is embedded
+            Length = Ravg + Rt/2 - (Rx*np.cos(qu_theta*2*np.pi/N)+np.sqrt((Ravg - Rt/2)**2 - Rx**2*np.sin(qu_theta*2*np.pi/N)**2))
+            Length_reduced = Length - (Zperplen + 2*gaplen) #reduced = ring dimesion minus island dimension
+            Width = 2*np.pi*Ravg/N #circumference divided by number of nodes
             Width_reduced = Width - (Zperpwid + 2*gapwid)
             epsilon = 8.85E-12            
             
             self.C = np.zeros((size+1,size+1))
-            Cjj_side = epsilon*(Length*Width_reduced/2+Length_reduced*(Zperpwid + 2*gapwid))/d
-            Cjj = epsilon*(Zperplen*Zperpwid)/d
-            Cjj_spacing = .75E-13
+            Cjj_side = epsilon*(Length*Width_reduced/2+Length_reduced*(Zperpwid + 2*gapwid))/d #
+            Cjj = epsilon*(Zperplen*Zperpwid)/d #capacitance of island
+            Cjj_spacing = 1E-14 #capacitance between a shore and island
             print "Cjj_side", Cjj_side, "Cjj_spacing", Cjj_spacing
             for i in range(size+1):
                 if i < qu_theta:
@@ -142,16 +146,17 @@ class simulated_wg(object):
                     self.C[i][i] += (d_l*smooth_c[i-1]/2)
                     self.C[(i-1)%(size+1)][(i-1)%(size+1)] += (d_l*smooth_c[i-1]/2)
                 elif i == qu_theta:
-                    self.C[i][i] += Cjj_spacing/2 + Cjj
-                    self.C[(i-1)%(size+1)][i] += -Cjj_spacing/2
+                    self.C[i][i] += Cjj_spacing + Cjj # Qu_theta denotes where the qubit is
+                    self.C[(i-1)%(size+1)][i] += -Cjj_spacing/2 #couple qubit to previous node
                     self.C[i][(i-1)%(size+1)] += -Cjj_spacing/2
-                    self.C[(i-1)%(size+1)][(i-1)%(size+1)] +=  Cjj_spacing/2 + Cjj_side
+                    self.C[(i-1)%(size+1)][(i-1)%(size+1)] +=  Cjj_spacing/2
                     
-                    self.C[(i+1)%(size+1)][i] += -Cjj_spacing/2
+                    self.C[(i+1)%(size+1)][i] += -Cjj_spacing/2#couple qubit to next node
                     self.C[i][(i+1)%(size+1)] += -Cjj_spacing/2
                     self.C[(i+1)%(size+1)][(i+1)%(size+1)] +=  Cjj_spacing/2
                 elif i == qu_theta+1:
                     self.C[(i)%(size+1)][(i)%(size+1)] +=  Cjj_side
+                    self.C[(i-2)%(size+1)][(i-2)%(size+1)] += Cjj_side
         else:
             self.C = np.zeros((size,size))
             for i in range(size):
@@ -162,6 +167,7 @@ class simulated_wg(object):
             print "C:", self.C
 
     def build_C_mat(self, verbose = False):
+        #depreciated
         smooth_c = interpolate_outliers(self.angles, self.capacitance, plot_me = verbose)
         smooth_c = moving_average(smooth_c, int(6*len(self.angles)/100.), plot_me = verbose)        
         size = len(smooth_c)
@@ -173,6 +179,7 @@ class simulated_wg(object):
             print "C:", self.C
             
     def build_L_mat_test(self,verbose = False):
+        #depreciated
         smooth_l = interpolate_outliers(self.angles, self.inductance)   
         smooth_l = interpolate_outliers(self.angles, smooth_l)
         size = len(smooth_l)
@@ -188,6 +195,7 @@ class simulated_wg(object):
         print "L:", self.L
 
     def build_C_mat_test(self):
+        #depreciated
         smooth_c = interpolate_outliers(self.angles, self.capacitance)
         size = len(smooth_c)
         self.C = np.zeros((size,size))

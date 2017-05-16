@@ -26,7 +26,8 @@ class waveguide(object):
         self.voltage = []           #Array of voltages
         self.inductance = []        #arry of inductance
         self.current = []
-        self.update_HFSS_Solutions()
+        
+        #self.update_HFSS_Solutions()
     
     def update_HFSS_Solutions(self):
         try:

@@ -13,6 +13,7 @@ import hfss, numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 import pandas as pd
+import math
 
 class simulated_wg(object):
     def __init__(self, name_variable = 0):
@@ -63,8 +64,11 @@ class simulated_wg(object):
             
             Ljj = 9E-9
             Ljj_side = mu*d*(Width_reduced/Length + (Zperpwid + 2*gapwid)/(Length_reduced))
-
-            print "Ljj_side", Ljj_side
+            print Ljj_side            
+            #Ljj_side = mu*d*(Width/Length_reduced)       
+            #print Ljj_side  
+            if verbose:
+                print "Ljj_side", Ljj_side
 
             self.L = np.zeros((size+1,size+1))
             for i in range(size+1):
@@ -82,14 +86,14 @@ class simulated_wg(object):
                 elif i == qu_theta:
                     self.L[(i+1)%(size+1)][(i+1)%(size+1)] +=  Ljj_side**-1 #inductance of transmission line around island
                     self.L[(i-1)%(size+1)][(i+1)%(size+1)] += -Ljj_side**-1
-                    self.L[(i+1)%(size+1)][(i-1)%(size+1)] += -Ljj_side**-1
+                    self.L[(i+1)%(size+1)][(i-1)%(size+1)] += -Ljj_side**-1 
                     self.L[(i-1)%(size+1)][(i-1)%(size+1)] +=  Ljj_side**-1
                     
                     ##draw bridge
                     self.L[i][i]          +=  Ljj**-1
-                    self.L[(i-1)%(size+1)][i] += -Ljj**-1
-                    self.L[i][(i-1)%(size+1)] += -Ljj**-1
-                    self.L[(i-1)%(size+1)][(i-1)%(size+1)] +=  Ljj**-1
+                    self.L[(i+1)%(size+1)][i] += -Ljj**-1
+                    self.L[i][(i+1)%(size+1)] += -Ljj**-1
+                    self.L[(i+1)%(size+1)][(i+1)%(size+1)] +=  Ljj**-1
                     
         else:
             self.L = np.zeros((size,size))
@@ -134,10 +138,11 @@ class simulated_wg(object):
             epsilon = 8.85E-12            
             
             self.C = np.zeros((size+1,size+1))
-            Cjj_side = epsilon*(Length*Width_reduced/2+Length_reduced*(Zperpwid + 2*gapwid))/d #
+            Cjj_side = epsilon*(Length*Width_reduced/2+Length_reduced*(Zperpwid + 2*gapwid)/2)/d #
             Cjj = epsilon*(Zperplen*Zperpwid)/d #capacitance of island
-            Cjj_spacing = 1E-14 #capacitance between a shore and island
-            print "Cjj_side", Cjj_side, "Cjj_spacing", Cjj_spacing
+            Cjj_spacing = 1*6.487E-14 #capacitance between a shore and island
+            if verbose:            
+                print "Cjj_side", Cjj_side, "Cjj_spacing", Cjj_spacing
             for i in range(size+1):
                 if i < qu_theta:
                     self.C[i][i] += (d_l*smooth_c[i]/2)
@@ -218,10 +223,16 @@ class simulated_wg(object):
             plt.title("Test of Interpolation")            
             plt.show()
         
-    def get_frequencies(self,verbose = False):
+    def get_frequencies(self,qu_theta=0, verbose = False):
+        n_modes = 3
         LC = np.dot(np.linalg.inv(self.C),self.L)
-        self.evals = -np.linalg.eigvals(LC)
-        self.calc_freq = np.sqrt(-self.evals)/(2*np.pi)
+        w,v = np.linalg.eig(LC)
+        idx = w.argsort()[::1]
+        w = w[idx]
+        w = np.sqrt(w)/(2*np.pi) #obtain eigen frequencies, not angular velocities
+        v = v[:,idx] #sort eigenvectors
+        self.calc_freq = w
+
         if verbose:
             plt.figure()
             plt.plot(np.sort(self.calc_freq)[0:8]/(10**9))
@@ -234,8 +245,50 @@ class simulated_wg(object):
             print "LC"
             print LC
             print "frequencies:"
-            print np.sort(self.calc_freq)
-        return np.sort(self.calc_freq)
+            print self.calc_freq
+            print "eigenvalues: ", w
+            print "eigenvectors: ", v      
+        
+        Ljj = 9E-9 #inductance of josephson junction
+        h = 6.626E-34 #plank's constant
+        hbar= h/(2*np.pi)
+        e = 1.602E-19 #electron charge in coulombs
+        reduced_flux_quant = hbar/(2*e)
+        EJ = reduced_flux_quant**2/Ljj #Josephson energy in junction 
+        
+        i = 0
+        if self.calc_freq[0]< 4E9 or math.isnan(self.calc_freq[0]):
+            i = 1
+            print "first mode is garbage"
+            
+#        E1 = .5*np.dot(v[i,:].T,np.dot(self.L,v[i,:]))
+#        Ejj = (v[i,qu_theta+1]-v[i,qu_theta])**2/Ljj
+        E = np.zeros(n_modes)
+        Ejj = np.zeros(n_modes)
+        EPR = np.zeros(n_modes)
+        nu = np.zeros(n_modes)
+        chi = np.zeros((n_modes,n_modes))
+            
+        for r in range(3):
+            E[r] = .5*np.dot(v[:,r+i].T,np.dot(self.L,v[:,r+i])) # Inductive energy in mode r
+            Ejj[r] = .5*(v[qu_theta,r+i]-v[qu_theta-1,r+i])**2/Ljj # Energy stored in junction inductance
+            EPR[r] = Ejj[r]/E[r] # Definition of Energy participation ratio
+            nu[r] = w[r+i] # frequency of rth node
+        
+        if verbose:
+            print "EPR: ", EPR
+            
+        for m in range(n_modes):
+            for n in range(n_modes):
+                chi[n][m] = nu[n]*nu[m]*EPR[m]*EPR[n]*h*np.pi/(2*EJ)
+        if verbose:
+            print "CHI: "
+            print chi/1E6 #report in MHz
+            print "frequencies: ",nu
+            print "Joshpson Energy: ",EJ
+
+        return np.sort(self.calc_freq),chi
+        
 
 def interpolate_outliers(angle, data, threshold=.5, window = 12, plot_me = False):
     '''

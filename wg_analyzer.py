@@ -158,12 +158,12 @@ def One_Trial(N = 100, collect_new_data = True, qubit = False, qu_theta = 0, ver
     print "One Trial"
     Load_sim_number = 1
     n_modes = 5
-    wg = waveguide() 
+#    wg = waveguide() 
     frequency_vector = []
-    scale_x = 0.0001
-    wg.set_scalex(scale_x)
-    z = 0.0001
-    wg.set_scalez(z)
+#    scale_x = 0.0001
+#    wg.set_scalex(scale_x)
+#    z = 0.0001
+#    wg.set_scalez(z)
     wg = waveguide(angle_s = 0, angle_e = 360,angle_n = N) 
     if collect_new_data:   
         wg.compute_LCVI(cap_surf = "CrossSecIntSurf", ind_surf = "CrossSecIntSurf1")  
@@ -175,7 +175,7 @@ def One_Trial(N = 100, collect_new_data = True, qubit = False, qu_theta = 0, ver
     #wg.plot()
     
     modes = [0,0,0,0,0]#wg.eigenmodes[0][0:n_modes]
-    sim_wg = simulated_wg(Load_sim_number)
+    sim_wg = simulated_wg(Load_sim_number, N)
 
     #GET LC VALUES and BUILD MATRIX
     sim_wg.build_L_mat(N, qubit, qu_theta, verbose)
@@ -302,7 +302,7 @@ def multi_perturb():
     ax.set_xlabel("Zmon Angle [deg]")
     ax.set_ylabel("Anharmonicity [MHz]")
     ax.set_xlim([0,180])
-    ax.set_ylim([5E-8,5000])
+    ax.set_ylim([5E-8,.5])
     ax.set_title("Anharmonicity")
     fig.show()  
 

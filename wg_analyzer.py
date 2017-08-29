@@ -189,11 +189,11 @@ def One_Trial(N = 100, collect_new_data = True, qubit = False, qu_theta = 0, ver
 #        i =i+1
     i = 0
     freq = freq_tmp[i:i+n_modes]/10**9
-    if freq_tmp[0]< 4E9:
-        i=1
+    freq2 = freq
+    while freq_tmp[i]< 6E9:
+        i+=1
         freq2 = list(freq_tmp[i:i+3]/10**9)
-    else:
-        freq2 = freq
+        
     #print "%d:%d"%(i,i+n_modes)
     
     diff = 100*(freq-modes)/modes    
@@ -206,7 +206,7 @@ def One_Trial(N = 100, collect_new_data = True, qubit = False, qu_theta = 0, ver
         print "Percent Difference:", diff
         
     np.save("../data/frequencyvector", freq_tmp)
-    return freq,modes,diff, freq2,chi
+    return freq,modes,diff, freq2,chi, sim_wg.get_mode_data()
    
 def multi_perturb():
     N = 100 #number of angles around WGMR
@@ -215,12 +215,23 @@ def multi_perturb():
     diff = []
     alpha = []
     chi_2 = []
+    
+    mode0_eigenvector = np.zeros((N+1,N+1))
+    mode1_eigenvector = np.zeros((N+1,N+1))
+    mode2_eigenvector = np.zeros((N+1,N+1))
+    mode3_eigenvector = np.zeros((N+1,N+1))
+    
     for z_angle in range(N):        
-        f,m,d,f2,chi = One_Trial(N, collect_new_data = False, qubit = True, qu_theta = z_angle)#(360-z_angle)/360*N)
+        f,m,d,f2,chi, mode_data = One_Trial(N, collect_new_data = False, qubit = True, qu_theta = z_angle)#(360-z_angle)/360*N)
         print f,m,d   
-        freq_eigen.append(f2[1:3])
+        freq_eigen.append(f2[0:2])
         alpha.append([chi[0][0]/1E6,chi[1][1]/1E6,chi[2][2]/1E6])
         chi_2.append([chi[0][1]/1E6,chi[0][2]/1E6])
+        
+        mode0_eigenvector[z_angle,:] = (1 if (mode_data[25,0] > 0) else -1)*mode_data[:,0]
+        mode1_eigenvector[z_angle,:] = (1 if (mode_data[25,1] > 0) else -1)*mode_data[:,1]
+        mode2_eigenvector[z_angle,:] = (1 if (mode_data[25,2] > 0) else -1)*mode_data[:,2]
+        mode3_eigenvector[z_angle,:] = (1 if (mode_data[10,3] > 0) else -1)*mode_data[:,3]
 
     z_angles = np.linspace(0,99,N)
     freq_hfss = [[7.17949645918, 7.52311254486], [7.17729060558, 7.52642053675], [7.18020417597, 7.52492349072], [7.18751505185, 7.51907559426], [7.19484172028, 7.51965879766], [7.2018582451, 7.51362016454], [7.21203045676, 7.51426117744], [7.22111698839, 7.50675208528], [7.232559786, 7.49761448872], [7.24373263931, 7.49354303057], [7.25169405444, 7.48509848577], [7.26153969295, 7.48479273155], [7.2685503918, 7.4779029865], [7.27666774887, 7.47384766439], [7.28592255107, 7.46257280371], [7.2884733008, 7.46779290153], [7.29147749386, 7.45915859387], [7.29553744083, 7.45928289], [7.29372978243, 7.4568602345], [7.29956383406, 7.46160199631], [7.30250987478, 7.46128985878], [7.29984683185, 7.46222505765], [7.30177099813, 7.46834402144], [7.30009053036, 7.47076497162], [7.29772867153, 7.4673487338], [7.29706466923, 7.46970499098], [7.2931305053, 7.47621135583], [7.29456884529, 7.48096259899], [7.29188152292, 7.48274498598], [7.29241676633, 7.48854175253], [7.28784841727, 7.49298119333], [7.28756283979, 7.49547526009], [7.28164647066, 7.49587901912], [7.28025619732, 7.49883869637], [7.28050585401, 7.50296030417], [7.27760409152, 7.50752801602], [7.27444670945, 7.51282189643], [7.27059386037, 7.51390330473], [7.27298649252, 7.51419114235], [7.26602532856, 7.51264916413], [7.269937045, 7.51919104958], [7.26548863661, 7.52045287139], [7.26342014554, 7.52113092101], [7.26666251186, 7.52299068981], [7.26625892072, 7.52129119286], [7.26469938545, 7.52333746679], [7.26238470764, 7.51730940131], [7.26197109232, 7.51705621858], [7.26391515593, 7.52203085334], [7.26149144728, 7.51819853355], [7.25970003983, 7.5206041302], [7.26056233098, 7.52111598943], [7.26218407255, 7.52119912248], [7.26183550999, 7.52080346143], [7.26070655725, 7.5207470539], [7.26385010518, 7.5271399089], [7.26530066781, 7.52033012405], [7.26440787125, 7.51566960356], [7.26755512969, 7.51979501886], [7.26716562431, 7.51685406984], [7.27241655815, 7.51611041641], [7.27097404378, 7.51046579307], [7.26993409032, 7.51113765311], [7.27519148604, 7.51231760159], [7.27320133048, 7.50736769254], [7.27845028092, 7.49865766676], [7.27494047469, 7.49602312553], [7.2834117512, 7.49695314167], [7.28218697902, 7.49346843524], [7.28689137486, 7.49690334089], [7.28614937781, 7.48627108648], [7.29218377844, 7.4891743447], [7.2948763783, 7.48240965356], [7.29513594687, 7.48333279004], [7.29696093364, 7.48109753616], [7.2973703338, 7.47181520478], [7.29903960354, 7.47533198758], [7.29902339551, 7.4669961955], [7.30014214629, 7.46357673546], [7.30273549286, 7.46120629625], [7.29979030443, 7.46186697785], [7.30266969891, 7.46163653316], [7.29670037061, 7.46225370245], [7.29679233747, 7.46221727325], [7.28897571951, 7.46070673436], [7.28886570178, 7.46822920942], [7.28411671113, 7.46896567754], [7.27456017031, 7.4713237753], [7.2675392359, 7.48177948259], [7.25926750472, 7.48394492336], [7.24408352307, 7.48496967572], [7.23721494457, 7.49086989952], [7.23273524807, 7.50057244084], [7.21753166348, 7.50757900796], [7.21196444948, 7.50993038214], [7.19846553379, 7.51245722219], [7.194024376, 7.5163601517], [7.18289267046, 7.5256934201], [7.18400433112, 7.52457543177], [7.17566000817, 7.53041260336]]    
@@ -305,7 +316,66 @@ def multi_perturb():
     ax.set_ylim([5E-8,.5])
     ax.set_title("Anharmonicity")
     fig.show()  
+    #plt.close()
+    
+    plt.figure()
+    plt.pcolor(mode0_eigenvector)  
+    plt.colorbar()
+    plt.axis([0,101,0,N])
+    plt.title("Mode 0 flux eigenvector")    
+    plt.ylabel("Zmon Angle [deg]")
+    plt.xlabel("Angle around WGMR [deg]")
+    raw_ticks = np.linspace(0,100,6)
+    mapped_ticks = np.linspace(0,360,6)
+    plt.xticks(raw_ticks,mapped_ticks)
+    plt.yticks(raw_ticks,mapped_ticks)
+    plt.show()
+    plt.close()
+    
+    plt.pcolor(mode1_eigenvector)
+    plt.colorbar()
+    plt.axis([0,101,0,N])
+    plt.title("Mode 1 flux eigenvector")    
+    plt.ylabel("Zmon Angle [deg]")
+    plt.xlabel("Angle around WGMR [deg]")
+    plt.xticks(raw_ticks,mapped_ticks)
+    plt.yticks(raw_ticks,mapped_ticks)
+    plt.show()
+    plt.close()
+    
+    plt.pcolor(mode2_eigenvector)
+    plt.colorbar()
+    plt.axis([0,101,0,N])
+    plt.title("Mode 2 flux eigenvector")    
+    plt.ylabel("Zmon Angle [deg]")
+    plt.xlabel("Angle around WGMR [deg]")
+    plt.xticks(raw_ticks,mapped_ticks)
+    plt.yticks(raw_ticks,mapped_ticks)
+    plt.show()
+    plt.close()
+    
+    plt.pcolor(mode3_eigenvector)
+    plt.colorbar()
+    plt.axis([0,101,0,N])
+    plt.title("Mode 3 flux eigenvector")    
+    plt.ylabel("Zmon Angle [deg]")
+    plt.xlabel("Angle around WGMR [deg]")
+    plt.xticks(raw_ticks,mapped_ticks)
+    plt.yticks(raw_ticks,mapped_ticks)
+    plt.show()
+    plt.close()
 
+    plt.plot(mode0_eigenvector[50])
+    plt.plot(mode1_eigenvector[50])
+    plt.plot(mode2_eigenvector[50])
+    plt.plot(mode3_eigenvector[50])
+    plt.title("Qu_angle = 50 flux eigenvector")    
+    plt.xlabel("Zmon Angle [deg]")
+    plt.xticks(raw_ticks,mapped_ticks)
+    plt.ylabel("Flux")
+    plt.show()
+    plt.close() 
+    
     print sum(np.abs(diff))/len(diff)
     #%%
 def collect_and_perturb():

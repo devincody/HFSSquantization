@@ -41,14 +41,16 @@ class simulated_wg(object):
         self.Zperplen = float(design.get_variable_value('zPerpLen').split('um')[0])*1E-6
         self.Zperpwid = float(design.get_variable_value('zPerpWid').split('um')[0])*1E-6
         self.gaplen = float(design.get_variable_value('GapLength').split('um')[0])*1E-6
-        self.gapwid = float(design.get_variable_value('GapWidth').split('um')[0])*1E-6    
- 
+        self.gapwid = float(design.get_variable_value('GapWidth').split('um')[0])*1E-6
+        
+        self.flux_eigenvectors = np.zeros((N+1,N+1))
+
     
     def build_L_mat(self, N = 100, qubit = False, qu_theta = 0, verbose = False):
         #smooth the data
         smooth_l = interpolate_outliers(self.angles, self.inductance, plot_me = verbose)  
-        smooth_l = moving_average(smooth_l, int(6*len(self.angles)/100.), plot_me = verbose) 
-        
+        smooth_l = 0.08*moving_average(smooth_l, int(6*len(self.angles)/100.), plot_me = verbose) 
+        #print "smoothL:", smooth_l
         if N == -1:
             size = len(smooth_l)
         else:
@@ -63,8 +65,11 @@ class simulated_wg(object):
             self.Length_reduced = self.Length - (self.Zperplen + 2*self.gaplen)
             self.Width_reduced = self.Width - (self.Zperpwid + 2*self.gapwid)
             Ljj = 9E-9
-            Ljj_side = .9*mu*self.d*(self.Width_reduced/self.Length + (self.Zperpwid + 2*self.gapwid)/(self.Length_reduced))            
+            Ljj_side = 0.03*mu*self.d*(self.Width_reduced/self.Length + (self.Zperpwid + 2*self.gapwid)/(self.Length_reduced))            
+            print "Ljj_side", Ljj_side
+            print "smooth L[qutheta]", (d_l*smooth_l[qu_theta])
 
+            
             if verbose:
                 print "Ljj_side", Ljj_side
                 print "smooth L[qutheta]", (d_l*smooth_l[qu_theta])
@@ -105,8 +110,8 @@ class simulated_wg(object):
     def build_C_mat_parallel(self, N =100, qubit = False, qu_theta = 0, verbose = False):
         #smooth the data       
         smooth_c = interpolate_outliers(self.angles, self.capacitance, plot_me = verbose)
-        smooth_c = moving_average(smooth_c, int(6*len(self.angles)/100.), plot_me = verbose)        
-        
+        smooth_c =(12.5)* moving_average(smooth_c, int(6*len(self.angles)/100.), plot_me = verbose)        
+        #print "smoothC:", smooth_c
         if N == -1:
             size = len(smooth_c)
         else:
@@ -126,15 +131,22 @@ class simulated_wg(object):
             
             Cjj_side = epsilon*(self.Length*self.Width_reduced/2+self.Length_reduced*(self.Zperpwid + 2*self.gapwid)/2)/self.d #
             Cjj = epsilon*(self.Zperplen*self.Zperpwid)/self.d #capacitance of island
-            Cjj_spacing = 1.1*6.487E-14 #capacitance between a shore and island
+            print "Cjj_side: ", Cjj_side
+            #Cjj_side = .5*.13E-12 *(self.Length/.0012)
+            print "Cjj_side: ", Cjj_side
+#            Cjj = 4.48E-14
+#            Cjj_spacing = 5.52E-14 #capacitance between a shore and island            
+            
+            Cjj = 4.9E-14 #capacitance of island
+            Cjj_spacing = 6.23E-14 #capacitance between both shores and island
             
             if verbose:
                 print "Cjj_side", Cjj_side, "Cjj_spacing", Cjj_spacing
                 print "smooth_c[qu_theta]", (d_l*smooth_c[qu_theta]/2)
                 
             for i in range(size):
-                self.C[i][i] += (d_l*smooth_c[i]/2)
-                self.C[(i-1)%(size)][(i-1)%(size)] += (d_l*smooth_c[i]/2)
+                self.C[i][i] += (d_l*smooth_c[i]/2)#*(abs(i-50)/50+1)
+                self.C[(i-1)%(size)][(i-1)%(size)] += (d_l*smooth_c[i]/2)#*(abs(i-50)/50+1)
 
             self.C[size][size]                              +=  Cjj_spacing + Cjj # Qu_theta denotes where the qubit is
             
@@ -222,6 +234,14 @@ class simulated_wg(object):
         w = w[idx]
         w = np.sqrt(w)/(2*np.pi) #obtain eigen frequencies, not angular velocities
         v = v[:,idx] #sort eigenvectors
+        self.flux_eigenvectors = v        
+        
+        #plt.plot(w)
+#        plt.plot(v[:,0:4])
+        #print w[0:4]
+#        plt.show()
+#        plt.close()
+        
         self.calc_freq = w
 
         if verbose:
@@ -248,9 +268,9 @@ class simulated_wg(object):
         EJ = reduced_flux_quant**2/Ljj #Josephson energy in junction 
         
         i = 0
-        if self.calc_freq[0]< 4E9 or math.isnan(self.calc_freq[0]):
-            i = 1
-            print "first mode is garbage"
+        while self.calc_freq[i]< 6E9 or math.isnan(self.calc_freq[i]):
+            i += 1
+            print "mode is garbage"
             
 #        E1 = .5*np.dot(v[i,:].T,np.dot(self.L,v[i,:]))
 #        Ejj = (v[i,qu_theta+1]-v[i,qu_theta])**2/Ljj
@@ -259,10 +279,12 @@ class simulated_wg(object):
         EPR = np.zeros(n_modes)
         nu = np.zeros(n_modes)
         chi = np.zeros((n_modes,n_modes))
-            
+        print "i: ", i
         for r in range(3):
             E[r] = .5*np.dot(v[:,r+i].T,np.dot(self.L,v[:,r+i])) # Inductive energy in mode r
-            Ejj[r] = .5*(v[(qu_theta)%size,r+i]-v[size,r+i])**2/Ljj # Energy stored in junction inductance
+            
+            Ejj[r] = .5*(v[qu_theta,r+i]-v[size,r+i])**2/Ljj # Energy stored in junction inductance
+            
             EPR[r] = Ejj[r]/E[r] # Definition of Energy participation ratio
             nu[r] = w[r+i] # frequency of rth node
         
@@ -279,7 +301,9 @@ class simulated_wg(object):
             print "Joshpson Energy: ",EJ
 
         return np.sort(self.calc_freq),chi
-        
+
+    def get_mode_data(self):
+        return self.flux_eigenvectors
 
 def interpolate_outliers(angle, data, threshold=.5, window = 12, plot_me = False):
     '''

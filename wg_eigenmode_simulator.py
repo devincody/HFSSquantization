@@ -49,7 +49,7 @@ class simulated_wg(object):
     def build_L_mat(self, N = 100, qubit = False, qu_theta = 0, verbose = False):
         #smooth the data
         smooth_l = interpolate_outliers(self.angles, self.inductance, plot_me = verbose)  
-        smooth_l = 0.08*moving_average(smooth_l, int(6*len(self.angles)/100.), plot_me = verbose) 
+        smooth_l = (1/20.0)*moving_average(smooth_l, int(6*len(self.angles)/100.), plot_me = verbose) 
         #print "smoothL:", smooth_l
         if N == -1:
             size = len(smooth_l)
@@ -65,7 +65,7 @@ class simulated_wg(object):
             self.Length_reduced = self.Length - (self.Zperplen + 2*self.gaplen)
             self.Width_reduced = self.Width - (self.Zperpwid + 2*self.gapwid)
             Ljj = 9E-9
-            Ljj_side = 0.03*mu*self.d*(self.Width_reduced/self.Length + (self.Zperpwid + 2*self.gapwid)/(self.Length_reduced))            
+            Ljj_side = (.02)*mu*self.d*(self.Width_reduced/self.Length + (self.Zperpwid + 2*self.gapwid)/(self.Length_reduced))            
             print "Ljj_side", Ljj_side
             print "smooth L[qutheta]", (d_l*smooth_l[qu_theta])
 
@@ -110,7 +110,7 @@ class simulated_wg(object):
     def build_C_mat_parallel(self, N =100, qubit = False, qu_theta = 0, verbose = False):
         #smooth the data       
         smooth_c = interpolate_outliers(self.angles, self.capacitance, plot_me = verbose)
-        smooth_c =(12.5)* moving_average(smooth_c, int(6*len(self.angles)/100.), plot_me = verbose)        
+        smooth_c =(20)* moving_average(smooth_c, int(6*len(self.angles)/100.), plot_me = verbose)        
         #print "smoothC:", smooth_c
         if N == -1:
             size = len(smooth_c)
@@ -132,21 +132,23 @@ class simulated_wg(object):
             Cjj_side = epsilon*(self.Length*self.Width_reduced/2+self.Length_reduced*(self.Zperpwid + 2*self.gapwid)/2)/self.d #
             Cjj = epsilon*(self.Zperplen*self.Zperpwid)/self.d #capacitance of island
             print "Cjj_side: ", Cjj_side
-            #Cjj_side = .5*.13E-12 *(self.Length/.0012)
+            Cjj_side = .5*.13E-12 *(self.Length/.0012)
             print "Cjj_side: ", Cjj_side
 #            Cjj = 4.48E-14
 #            Cjj_spacing = 5.52E-14 #capacitance between a shore and island            
             
-            Cjj = 4.9E-14 #capacitance of island
-            Cjj_spacing = 6.23E-14 #capacitance between both shores and island
+            Cjj = (40)*4.9E-14 #capacitance of island
+            #Cjj_spacing = 6.23E-14 #capacitance between both shores and island
+            Cjj_spacing = (1)*2.2E-14 *(abs(qu_theta-50)/50+1)#capacitance between both shores and island
+                                    #picked so that qubit mode = 6.3GHz
             
             if verbose:
                 print "Cjj_side", Cjj_side, "Cjj_spacing", Cjj_spacing
                 print "smooth_c[qu_theta]", (d_l*smooth_c[qu_theta]/2)
                 
             for i in range(size):
-                self.C[i][i] += (d_l*smooth_c[i]/2)#*(abs(i-50)/50+1)
-                self.C[(i-1)%(size)][(i-1)%(size)] += (d_l*smooth_c[i]/2)#*(abs(i-50)/50+1)
+                self.C[i][i] += (d_l*smooth_c[i]/2)*(abs(i-50)/50+1)
+                self.C[(i-1)%(size)][(i-1)%(size)] += (d_l*smooth_c[i]/2)*(abs(i-50)/50+1)
 
             self.C[size][size]                              +=  Cjj_spacing + Cjj # Qu_theta denotes where the qubit is
             
@@ -169,62 +171,8 @@ class simulated_wg(object):
                 
         if verbose:
             print "C:", self.C
-            
         
-
-    def build_C_mat(self, verbose = False):
-        #depreciated
-        smooth_c = interpolate_outliers(self.angles, self.capacitance, plot_me = verbose)
-        smooth_c = moving_average(smooth_c, int(6*len(self.angles)/100.), plot_me = verbose)        
-        size = len(smooth_c)
-        self.C = np.zeros((size,size))
-        d_l = 5.89*.001*2*np.pi/len(self.angles)  ##average circumfrence divided by numb nodes
-        for i in range(size):
-            self.C[i][i] = (d_l*smooth_c[i])
-        if verbose:
-            print "C:", self.C
-            
-    def build_L_mat_test(self,verbose = False):
-        #depreciated
-        smooth_l = interpolate_outliers(self.angles, self.inductance)   
-        smooth_l = interpolate_outliers(self.angles, smooth_l)
-        size = len(smooth_l)
-        self.L = np.zeros((size,size))
-        d_l = 0.001#5.89*.001*2*np.pi/100
-        #v = 1;
-        for i in range(size):
-            v                     = (d_l*(.4+.05*.4*np.random.randn())*np.pi*10**(-7))**-1
-            self.L[i][i]          +=  v
-            self.L[(i+1)%size][i] += -v
-            self.L[i][(i+1)%size] += -v
-            self.L[(i+1)%size][(i+1)%size] +=  v
-        print "L:", self.L
-
-    def build_C_mat_test(self):
-        #depreciated
-        smooth_c = interpolate_outliers(self.angles, self.capacitance)
-        size = len(smooth_c)
-        self.C = np.zeros((size,size))
-        d_l = 0.001#5.89*.001*2*np.pi/100
-        for i in range(size):
-            self.C[i][i] = (d_l*(10+.05*10*np.random.randn())*8.8541878176*10**(-12))
-            #self.C[(i+1)%size][i] += -(d_l*2.3*10**(-10))
-            #self.C[i][(i+1)%size] += -(d_l*2.3*10**(-10))
-            #self.C[(i+1)%size][(i+1)%size] += (d_l*2.3*10**(-10))
-        print "C:", self.C
-
-    def test_interpolate(self,plot_me = True):
-        potted = self.capacitance
-        voltage = interpolate_outliers(self.angles,potted, plot_me = False)
-        voltage = interpolate_outliers(self.angles,voltage, plot_me = False)
-        if plot_me:
-            plt.plot(self.angles,voltage, self.angles, potted)
-            ax = plt.gca()
-            ax.set_ylim(min(voltage)-abs(min(voltage)*.05), max(voltage)*1.05)
-            plt.title("Test of Interpolation")            
-            plt.show()
-        
-    def get_frequencies(self,qu_theta=0, verbose = False):
+    def calc_frequencies(self,qu_theta=0, verbose = False):
         n_modes = 3
         LC = np.dot(np.linalg.inv(self.C),self.L)
 
@@ -236,17 +184,9 @@ class simulated_wg(object):
         v = v[:,idx] #sort eigenvectors
         self.flux_eigenvectors = v        
         
-        #plt.plot(w)
-#        plt.plot(v[:,0:4])
-        #print w[0:4]
-#        plt.show()
-#        plt.close()
-        
-        self.calc_freq = w
-
         if verbose:
             plt.figure()
-            plt.plot(np.sort(self.calc_freq)[0:8]/(10**9))
+            plt.plot(np.sort(w)[0:8]/(10**9))
             plt.title("Frequency Eigenmodes")
             plt.xlabel("Eigenmode index")
             plt.ylabel("Frequency (Hz)")
@@ -256,7 +196,6 @@ class simulated_wg(object):
             print "LC"
             print LC
             print "frequencies:"
-            print self.calc_freq
             print "eigenvalues: ", w
             print "eigenvectors: ", v      
         
@@ -268,39 +207,42 @@ class simulated_wg(object):
         EJ = reduced_flux_quant**2/Ljj #Josephson energy in junction 
         
         i = 0
-        while self.calc_freq[i]< 6E9 or math.isnan(self.calc_freq[i]):
+        while w[i]< .1E9 or math.isnan(w[i]):
             i += 1
-            print "mode is garbage"
+            #print "mode is garbage"
             
 #        E1 = .5*np.dot(v[i,:].T,np.dot(self.L,v[i,:]))
 #        Ejj = (v[i,qu_theta+1]-v[i,qu_theta])**2/Ljj
         E = np.zeros(n_modes)
         Ejj = np.zeros(n_modes)
         EPR = np.zeros(n_modes)
-        nu = np.zeros(n_modes)
-        chi = np.zeros((n_modes,n_modes))
+        self.nu = np.zeros(n_modes)
+        self.chi = np.zeros((n_modes,n_modes))
         print "i: ", i
+
         for r in range(3):
             E[r] = .5*np.dot(v[:,r+i].T,np.dot(self.L,v[:,r+i])) # Inductive energy in mode r
-            
             Ejj[r] = .5*(v[qu_theta,r+i]-v[size,r+i])**2/Ljj # Energy stored in junction inductance
-            
             EPR[r] = Ejj[r]/E[r] # Definition of Energy participation ratio
-            nu[r] = w[r+i] # frequency of rth node
+            self.nu[r] = w[r+i] # frequency of rth node
         
         if verbose:
             print "EPR: ", EPR
             
         for m in range(n_modes):
             for n in range(n_modes):
-                chi[n][m] = nu[n]*nu[m]*EPR[m]*EPR[n]*h*np.pi/(2*EJ)
+                self.chi[n][m] = self.nu[n]*self.nu[m]*EPR[m]*EPR[n]*h*np.pi/(2*EJ)
         if verbose:
             print "CHI: "
-            print chi/1E6 #report in MHz
-            print "frequencies: ",nu
+            print self.chi/1E6 #report in MHz
+            print "frequencies: ",self.nu
             print "Joshpson Energy: ",EJ
 
-        return np.sort(self.calc_freq),chi
+    def get_frequencies(self):
+        return self.nu
+        
+    def get_chi(self):
+        return self.chi
 
     def get_mode_data(self):
         return self.flux_eigenvectors
